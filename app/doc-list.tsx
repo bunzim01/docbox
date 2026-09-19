@@ -138,11 +138,6 @@ export default function DocList({
     () => (inNoFolder ? [] : childFolders(folders, openFolder)),
     [folders, openFolder, inNoFolder],
   );
-  const siblings = useMemo(
-    () => (currentFolder ? childFolders(folders, currentFolder.parent_id) : []),
-    [folders, currentFolder],
-  );
-
   /** 검색 중이면 폴더를 무시하고 전부 뒤진다 */
   const scoped = useMemo(() => {
     if (searching) return documents;
@@ -332,30 +327,6 @@ export default function DocList({
           className="w-full rounded-xl bg-zinc-100 px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-900 sm:py-2.5"
         />
 
-        {!searching && siblings.length > 1 && (
-          <div className="mt-3 grid grid-cols-3 gap-1.5 sm:hidden">
-            {siblings.map((folder) => {
-              const on = openFolder === folder.id;
-              return (
-                <button
-                  key={folder.id}
-                  type="button"
-                  onClick={() => goFolder(folder.id)}
-                  className={`rounded-xl px-1 py-2.5 text-base leading-tight ${
-                    on ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  {folderNameLines(folder.name).map((line) => (
-                    <span key={line} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
         {!atRoot && tagsHere.length > 0 && (
           <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {tagsHere.map((tag) => {
@@ -399,11 +370,9 @@ export default function DocList({
           folders={children}
           counts={counts}
           noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
-          canAdd={path.length < MAX_FOLDER_DEPTH}
           editMode={editFolders}
           pending={pending}
           onToggleEdit={() => setEditFolders((v) => !v)}
-          onAdd={() => setNewFolderOpen(true)}
           onOpen={goFolder}
           onRename={(id, name) => run(() => renameFolder(id, name))}
           onDelete={(folder) => {
@@ -491,6 +460,18 @@ export default function DocList({
           </>
         )
       ) : null}
+
+      {!searching && !inNoFolder && path.length < MAX_FOLDER_DEPTH && !selecting && (
+        <div className="px-5 pt-6 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setNewFolderOpen(true)}
+            className="text-base text-zinc-400 underline"
+          >
+            + 새 폴더
+          </button>
+        </div>
+      )}
 
       {!selecting && (
         <Link
@@ -603,11 +584,9 @@ function FolderSection({
   folders,
   counts,
   noFolderCount,
-  canAdd,
   editMode,
   pending,
   onToggleEdit,
-  onAdd,
   onOpen,
   onRename,
   onDelete,
@@ -615,24 +594,19 @@ function FolderSection({
   folders: Folder[];
   counts: Map<string, number>;
   noFolderCount: number;
-  canAdd: boolean;
   editMode: boolean;
   pending: boolean;
   onToggleEdit: () => void;
-  onAdd: () => void;
   onOpen: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (folder: Folder) => void;
 }) {
-  const nothing = folders.length === 0 && noFolderCount === 0;
-  if (nothing && !canAdd) return null;
+  if (folders.length === 0 && noFolderCount === 0) return null;
 
   return (
     <>
       <div className="flex items-center justify-between px-5 pt-4 sm:hidden">
-        <h2 className="text-base font-semibold text-zinc-400">
-          {nothing ? "폴더 없음" : "폴더"}
-        </h2>
+        <h2 className="text-base font-semibold text-zinc-400">폴더</h2>
         {folders.length > 0 && (
           <button type="button" onClick={onToggleEdit} className="text-base text-zinc-400 underline">
             {editMode ? "완료" : "편집"}
@@ -701,18 +675,6 @@ function FolderSection({
             </button>
           )}
 
-          {canAdd && (
-            <button
-              type="button"
-              onClick={onAdd}
-              className="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 px-1 py-4 active:bg-zinc-50 sm:py-3 sm:hover:border-zinc-400 sm:hover:bg-zinc-50"
-            >
-              <span className="text-4xl leading-none text-zinc-300">+</span>
-              <span className="text-center text-base font-semibold leading-tight text-zinc-500">
-                새 폴더
-              </span>
-            </button>
-          )}
         </div>
       )}
     </>
