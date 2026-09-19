@@ -18,6 +18,7 @@ import {
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
 import FileIcon from "./file-icon";
 import KakaoIcon from "./kakao-icon";
+import QuickUpload from "./quick-upload";
 import ShareButton, { KakaoSheet } from "./share-button";
 import {
   createFolder,
@@ -460,6 +461,10 @@ export default function DocList({
           </>
         )
       ) : null}
+
+      {!selecting && !searching && !inNoFolder && (
+        <QuickUpload folderId={openFolder} />
+      )}
 
       {!searching && !inNoFolder && path.length < MAX_FOLDER_DEPTH && !selecting && (
         <div className="px-5 pt-6 sm:hidden">
