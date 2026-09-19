@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+html {
+  /* 아이폰/안드로이드 기본 한글 폰트 우선 */
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
