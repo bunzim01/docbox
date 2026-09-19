@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions";
 import type { Folder } from "@/lib/documents";
-import { extFromFileName, folderPath, formatSize, parseTags, titleFromFileName } from "@/lib/format";
+import { extFromFileName, flattenFolders, formatSize, parseTags, titleFromFileName } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import FileIcon from "@/app/file-icon";
 
@@ -140,17 +140,17 @@ export default function UploadForm({
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mb-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed py-10 active:bg-zinc-50 sm:py-8 sm:hover:border-zinc-400 sm:hover:bg-zinc-50 ${
+        className={`mb-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed py-8 active:bg-zinc-50 sm:py-6 sm:hover:border-zinc-400 sm:hover:bg-zinc-50 ${
           dragging ? "border-zinc-900 bg-zinc-100" : "border-zinc-300"
         }`}
       >
-        <span className="text-3xl text-zinc-300">+</span>
+        <span className="text-3xl leading-none text-zinc-300">+</span>
         <span className="mt-2 text-lg font-semibold text-zinc-700">
           {dragging ? "여기에 놓으세요" : "파일 선택"}
         </span>
-        <span className="mt-1 text-base text-zinc-400">PDF · PPT · DOC · XLS · 여러 개 가능</span>
-        <span className="mt-1 hidden text-base text-zinc-400 sm:block">
-          파일을 끌어다 놓아도 됩니다
+        <span className="mt-1 text-base text-zinc-400">
+          PDF · PPT · DOC · XLS
+          <span className="hidden sm:inline"> · 끌어다 놓아도 됩니다</span>
         </span>
         <input
           type="file"
@@ -215,38 +215,31 @@ export default function UploadForm({
 
       {folders.length > 0 && (
         <>
-          <label className="mb-2 block text-lg text-zinc-500">폴더</label>
-          <div className="mb-5 flex flex-wrap gap-2">
-            {folders.map((folder) => (
-              <button
-                key={folder.id}
-                type="button"
-                disabled={busy}
-                onClick={() => setFolderId(folder.id)}
-                className={`rounded-xl px-4 py-2.5 text-lg ${
-                  folderId === folder.id
-                    ? "bg-zinc-900 font-semibold text-white"
-                    : "bg-zinc-100 text-zinc-600"
-                }`}
-              >
-                {folderPath(folders, folder.id).map((f) => f.name).join(" › ")}
-              </button>
+          <label htmlFor="folder" className="mb-1 block text-base text-zinc-500">
+            폴더
+          </label>
+          <select
+            id="folder"
+            value={folderId ?? ""}
+            disabled={busy}
+            onChange={(e) => setFolderId(e.target.value || null)}
+            className="mb-5 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50 sm:py-2.5"
+          >
+            {flattenFolders(folders).map(({ folder, depth }) => (
+              <option key={folder.id} value={folder.id}>
+                {"\u00A0\u00A0\u00A0".repeat(depth)}
+                {depth > 0 ? "└ " : ""}
+                {folder.name}
+              </option>
             ))}
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setFolderId(null)}
-              className={`rounded-xl px-4 py-2.5 text-lg ${
-                folderId === null ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-500"
-              }`}
-            >
-              분류 안 함
-            </button>
-          </div>
+            <option value="">분류 안 함</option>
+          </select>
         </>
       )}
 
-      <label className="mb-1 block text-base text-zinc-500">태그 (쉼표로 구분)</label>
+      <label className="mb-1 block text-base text-zinc-500">
+        태그 <span className="text-zinc-400">· 쉼표로 구분, 파일 전체에 똑같이 들어갑니다</span>
+      </label>
       <input
         value={tags}
         onChange={(e) => setTags(e.target.value)}
@@ -280,8 +273,6 @@ export default function UploadForm({
         disabled={busy}
         className="w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50"
       />
-
-      <p className="mt-2 text-base text-zinc-400">태그와 메모는 선택한 파일 전체에 똑같이 들어갑니다.</p>
 
       {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-base text-red-600">{error}</p>}
 

@@ -8,6 +8,7 @@ import {
   childFolders,
   folderAndDescendants,
   folderNameLines,
+  flattenFolders,
   folderPath,
   formatDate,
   formatDateShort,
@@ -1090,24 +1091,22 @@ function MoveSheet({
     <Sheet title="폴더 이동" onClose={onClose}>
       <p className="mb-3 truncate text-base text-zinc-500">{doc.title}</p>
       <ul className="max-h-[50vh] overflow-y-auto">
-        {folders.map((folder) => {
-          const path = folderPath(folders, folder.id);
-          return (
-            <li key={folder.id}>
-              <button
-                type="button"
-                onClick={() => onPick(folder.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50 ${
-                  doc.folder_id === folder.id ? "font-bold" : ""
-                }`}
-              >
-                <span>📁</span>
-                <span className="flex-1 truncate">{path.map((f) => f.name).join(" › ")}</span>
-                {doc.folder_id === folder.id && <span className="text-zinc-400">현재</span>}
-              </button>
-            </li>
-          );
-        })}
+        {flattenFolders(folders).map(({ folder, depth }) => (
+          <li key={folder.id}>
+            <button
+              type="button"
+              onClick={() => onPick(folder.id)}
+              style={{ paddingLeft: `${12 + depth * 20}px` }}
+              className={`flex w-full items-center gap-2 rounded-xl py-3.5 pr-3 text-left text-lg active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50 ${
+                doc.folder_id === folder.id ? "font-bold" : ""
+              }`}
+            >
+              <span>📁</span>
+              <span className="flex-1 truncate">{folder.name}</span>
+              {doc.folder_id === folder.id && <span className="text-base text-zinc-400">현재</span>}
+            </button>
+          </li>
+        ))}
         <li>
           <button
             type="button"

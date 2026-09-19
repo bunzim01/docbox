@@ -66,12 +66,14 @@ export function folderNameLines(name: string): string[] {
   return [name];
 }
 
-/** 어떤 폴더의 바로 아래 하위폴더들 */
-export function childFolders<T extends { id: string; parent_id: string | null }>(
+/** 어떤 폴더의 바로 아래 하위폴더들 (가나다순) */
+export function childFolders<T extends { id: string; name: string; parent_id: string | null }>(
   folders: T[],
   parentId: string | null,
 ): T[] {
-  return folders.filter((f) => (f.parent_id ?? null) === parentId);
+  return folders
+    .filter((f) => (f.parent_id ?? null) === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
 
 /** 맨 위부터 그 폴더까지의 경로 (예: 제품소개서 › A브랜드) */
@@ -109,4 +111,20 @@ const DATE_SHORT = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" });
 export function formatDateShort(iso: string | null): string {
   if (!iso) return "";
   return DATE_SHORT.format(new Date(iso));
+}
+
+/** 폴더를 트리 순서대로 펼친다 (상위 → 그 하위 → 다음 상위 …) */
+export function flattenFolders<
+  T extends { id: string; name: string; parent_id: string | null },
+>(folders: T[], parentId: string | null = null, depth = 0): { folder: T; depth: number }[] {
+  const here = folders
+    .filter((f) => (f.parent_id ?? null) === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+
+  const out: { folder: T; depth: number }[] = [];
+  for (const folder of here) {
+    out.push({ folder, depth });
+    if (depth < 5) out.push(...flattenFolders(folders, folder.id, depth + 1));
+  }
+  return out;
 }
