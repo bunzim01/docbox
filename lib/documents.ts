@@ -4,7 +4,11 @@ export type Folder = {
   id: string;
   name: string;
   sort_order: number;
+  parent_id: string | null;
 };
+
+/** 폴더 깊이 제한 — 맨 위(1차) / 2차 / 3차 까지만 */
+export const MAX_FOLDER_DEPTH = 3;
 
 export type DocView = Doc & { fileUrl: string };
 
@@ -26,7 +30,7 @@ export type Doc = {
 export async function listFolders(): Promise<Folder[]> {
   const { data, error } = await supabase()
     .from("folders")
-    .select("id, name, sort_order")
+    .select("id, name, sort_order, parent_id")
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 

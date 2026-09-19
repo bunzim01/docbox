@@ -65,3 +65,40 @@ export function folderNameLines(name: string): string[] {
   if (i > 0) return [name.slice(0, i).trim(), name.slice(i).trim()];
   return [name];
 }
+
+/** 어떤 폴더의 바로 아래 하위폴더들 */
+export function childFolders<T extends { id: string; parent_id: string | null }>(
+  folders: T[],
+  parentId: string | null,
+): T[] {
+  return folders.filter((f) => (f.parent_id ?? null) === parentId);
+}
+
+/** 맨 위부터 그 폴더까지의 경로 (예: 제품소개서 › A브랜드) */
+export function folderPath<T extends { id: string; parent_id: string | null }>(
+  folders: T[],
+  id: string | null,
+): T[] {
+  const path: T[] = [];
+  let cur = folders.find((f) => f.id === id);
+  let guard = 0;
+  while (cur && guard++ < 10) {
+    path.unshift(cur);
+    cur = cur.parent_id ? folders.find((f) => f.id === cur!.parent_id) : undefined;
+  }
+  return path;
+}
+
+/** 그 폴더와 그 아래 모든 하위폴더의 id */
+export function folderAndDescendants<T extends { id: string; parent_id: string | null }>(
+  folders: T[],
+  id: string,
+): string[] {
+  const out = [id];
+  for (let i = 0; i < out.length; i++) {
+    for (const f of folders) {
+      if (f.parent_id === out[i] && !out.includes(f.id)) out.push(f.id);
+    }
+  }
+  return out;
+}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions";
 import type { Folder } from "@/lib/documents";
-import { extFromFileName, formatSize, parseTags, titleFromFileName } from "@/lib/format";
+import { extFromFileName, folderPath, formatSize, parseTags, titleFromFileName } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
 const ACCEPT = ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx";
@@ -202,7 +202,7 @@ export default function UploadForm({
                     : "bg-zinc-100 text-zinc-600"
                 }`}
               >
-                {folder.name}
+                {folderPath(folders, folder.id).map((f) => f.name).join(" › ")}
               </button>
             ))}
             <button

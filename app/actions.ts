@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth-server";
 import { BUCKET, supabase } from "@/lib/supabase";
+import { MAX_FOLDER_DEPTH } from "@/lib/documents";
 import { extFromFileName } from "@/lib/format";
 
 export type Result = { ok: true } | { ok: false; error: string };
@@ -118,7 +119,10 @@ export async function deleteDocument(id: string): Promise<Result> {
 
 /* ---------------- 폴더 ---------------- */
 
-export async function createFolder(name: string): Promise<Result> {
+export async function createFolder(
+  name: string,
+  parentId: string | null = null,
+): Promise<Result> {
   await requireAuth();
 
   const clean = name.trim();
@@ -126,21 +130,40 @@ export async function createFolder(name: string): Promise<Result> {
   if (clean.length > 30) return { ok: false, error: "폴더 이름이 너무 깁니다." };
 
   const sb = supabase();
+
+  // 3차까지만 허용 — 너무 깊어지면 폰에서 찾기 어렵다
+  if (parentId) {
+    let depth = 1;
+    let cur: string | null = parentId;
+    while (cur && depth < 10) {
+      const found: { parent_id: string | null } | null = (
+        await sb.from("folders").select("parent_id").eq("id", cur).maybeSingle()
+      ).data;
+      if (!found) break;
+      depth += 1;
+      cur = found.parent_id;
+    }
+    if (depth >= MAX_FOLDER_DEPTH + 1) {
+      return { ok: false, error: `폴더는 ${MAX_FOLDER_DEPTH}단계까지만 만들 수 있습니다.` };
+    }
+  }
+
   const { data: last } = await sb
     .from("folders")
     .select("sort_order")
+    .eq("parent_id", parentId as never)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   const { error } = await sb
     .from("folders")
-    .insert({ name: clean, sort_order: (last?.sort_order ?? 0) + 1 });
+    .insert({ name: clean, sort_order: (last?.sort_order ?? 0) + 1, parent_id: parentId });
 
   if (error) {
     return {
       ok: false,
-      error: error.code === "23505" ? "같은 이름의 폴더가 이미 있습니다." : error.message,
+      error: error.code === "23505" ? "같은 위치에 같은 이름의 폴더가 있습니다." : error.message,
     };
   }
   revalidatePath("/");
@@ -203,6 +226,32 @@ export async function markSent(id: string): Promise<Result> {
     .eq("id", id);
 
   if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** 여러 개를 한 번에 보냈을 때 */
+export async function markSentMany(ids: string[]): Promise<Result> {
+  await requireAuth();
+  if (ids.length === 0) return { ok: true };
+
+  const sb = supabase();
+  const { data: docs, error: findError } = await sb
+    .from("documents")
+    .select("id, sent_count")
+    .in("id", ids);
+
+  if (findError) return { ok: false, error: findError.message };
+
+  const now = new Date().toISOString();
+  for (const doc of docs ?? []) {
+    const { error } = await sb
+      .from("documents")
+      .update({ sent_count: (doc.sent_count ?? 0) + 1, last_sent_at: now })
+      .eq("id", doc.id);
+    if (error) return { ok: false, error: error.message };
+  }
+
   revalidatePath("/");
   return { ok: true };
 }

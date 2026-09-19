@@ -3,13 +3,24 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import type { Doc, DocView, Folder } from "@/lib/documents";
-import { fileBadge, folderNameLines, formatDate, formatSize, parseTags } from "@/lib/format";
-import ShareButton from "./share-button";
+import { MAX_FOLDER_DEPTH, type DocView, type Folder } from "@/lib/documents";
+import {
+  childFolders,
+  fileBadge,
+  folderAndDescendants,
+  folderNameLines,
+  folderPath,
+  formatDate,
+  formatSize,
+  parseTags,
+} from "@/lib/format";
+import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import ShareButton, { KakaoSheet } from "./share-button";
 import {
   createFolder,
   deleteDocument,
   deleteFolder,
+  markSentMany,
   moveDocument,
   renameFolder,
   setFavorite,
@@ -38,8 +49,14 @@ export default function DocList({
   const [editing, setEditing] = useState<DocView | null>(null);
   const [moving, setMoving] = useState<DocView | null>(null);
   const [editFolders, setEditFolders] = useState(false);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [sort, setSort] = useState<"recent" | "name">("recent");
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [kakaoDocs, setKakaoDocs] = useState<DocView[] | null>(null);
+  const [toast, setToast] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const searching = query.trim().length > 0;
@@ -51,6 +68,12 @@ export default function DocList({
       // 사생활 보호 모드 등에서 막히면 기본값(최신순)으로 둔다
     }
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2200);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   function toggleSort() {
     const next = sort === "recent" ? "name" : "recent";
@@ -80,19 +103,41 @@ export default function DocList({
     window.history.pushState(null, "", qs ? `/?${qs}` : "/");
     setActiveTags([]);
     setMenuId(null);
+    setEditFolders(false);
+    setSelecting(false);
+    setPicked([]);
   }
 
+  /** 폴더별 문서 개수 — 하위폴더에 든 것까지 합쳐서 센다 */
   const counts = useMemo(() => {
-    const map = new Map<string, number>();
+    const direct = new Map<string, number>();
     for (const doc of documents) {
       const key = doc.folder_id ?? NO_FOLDER;
-      map.set(key, (map.get(key) ?? 0) + 1);
+      direct.set(key, (direct.get(key) ?? 0) + 1);
     }
-    return map;
-  }, [documents]);
+    const total = new Map<string, number>();
+    for (const folder of folders) {
+      const ids = folderAndDescendants(folders, folder.id);
+      total.set(
+        folder.id,
+        ids.reduce((sum, id) => sum + (direct.get(id) ?? 0), 0),
+      );
+    }
+    total.set(NO_FOLDER, direct.get(NO_FOLDER) ?? 0);
+    return total;
+  }, [documents, folders]);
 
   const currentFolder = folders.find((f) => f.id === openFolder) ?? null;
   const inNoFolder = openFolder === NO_FOLDER;
+  const path = useMemo(() => folderPath(folders, openFolder), [folders, openFolder]);
+  const children = useMemo(
+    () => (inNoFolder ? [] : childFolders(folders, openFolder)),
+    [folders, openFolder, inNoFolder],
+  );
+  const siblings = useMemo(
+    () => (currentFolder ? childFolders(folders, currentFolder.parent_id) : []),
+    [folders, currentFolder],
+  );
 
   /** 검색 중이면 폴더를 무시하고 전부 뒤진다 */
   const scoped = useMemo(() => {
@@ -133,35 +178,128 @@ export default function DocList({
 
   const atRoot = !openFolder && !searching;
   const recent = useMemo(() => documents.slice(0, 5), [documents]);
+  const pickedDocs = useMemo(
+    () => documents.filter((d) => picked.includes(d.id)),
+    [documents, picked],
+  );
+
+  function togglePick(id: string) {
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  /** 고른 문서들을 한 번에 보낸다 */
+  async function sharePicked() {
+    if (pickedDocs.length === 0) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (canShareFiles()) {
+        const result = await shareFiles(pickedDocs);
+        if (result.status === "shared") {
+          await markSentMany(picked);
+          setSelecting(false);
+          setPicked([]);
+          router.refresh();
+          return;
+        }
+        if (result.status === "cancelled") return;
+        if (result.status === "error") {
+          setError(result.message);
+          return;
+        }
+        setToast("한 번에 보내기엔 용량이 큽니다. 링크로 보냅니다.");
+      }
+
+      const copied = await copyShareLinks(picked);
+      if (!copied) {
+        setError("링크를 복사하지 못했습니다.");
+        return;
+      }
+      setKakaoDocs(pickedDocs);
+      await markSentMany(picked);
+      setSelecting(false);
+      setPicked([]);
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const title = searching
+    ? "전체 검색"
+    : inNoFolder
+      ? "분류 안 함"
+      : (currentFolder?.name ?? "문서함");
 
   return (
     <main className="flex flex-1 flex-col pb-28">
       <header className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-5 pb-3 pt-3">
         <div className="mb-2 flex items-center gap-2">
-          {openFolder && !searching && (
+          {(openFolder || searching) && (
             <button
               type="button"
-              onClick={() => goFolder(null)}
-              aria-label="문서함으로"
+              onClick={() =>
+                searching
+                  ? setQuery("")
+                  : goFolder(currentFolder?.parent_id ?? null)
+              }
+              aria-label="뒤로"
               className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100"
             >
               ←
             </button>
           )}
-          <h1 className="flex-1 truncate text-xl font-bold">
-            {searching ? "전체 검색" : (currentFolder?.name ?? (inNoFolder ? "분류 안 함" : "문서함"))}
-          </h1>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold">{title}</h1>
+            {path.length > 1 && !searching && (
+              <p className="truncate text-base text-zinc-400">
+                <button type="button" onClick={() => goFolder(null)} className="underline">
+                  문서함
+                </button>
+                {path.slice(0, -1).map((f) => (
+                  <span key={f.id}>
+                    {" › "}
+                    <button
+                      type="button"
+                      onClick={() => goFolder(f.id)}
+                      className="underline"
+                    >
+                      {f.name}
+                    </button>
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+
           <span className="shrink-0 text-base text-zinc-400">
             {searching ? `${shown.length}개` : `${scoped.length}개`}
           </span>
+
           {!atRoot && (
-            <button
-              type="button"
-              onClick={toggleSort}
-              className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200"
-            >
-              {sort === "name" ? "가나다순" : "최신순"}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={toggleSort}
+                className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200"
+              >
+                {sort === "name" ? "가나다순" : "최신순"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelecting((v) => !v);
+                  setPicked([]);
+                  setMenuId(null);
+                }}
+                className={`shrink-0 rounded-lg px-3 py-2 text-base ${
+                  selecting ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
+                }`}
+              >
+                {selecting ? "취소" : "선택"}
+              </button>
+            </>
           )}
         </div>
 
@@ -173,9 +311,9 @@ export default function DocList({
           className="w-full rounded-xl bg-zinc-100 px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-900"
         />
 
-        {!atRoot && !searching && folders.length > 0 && (
+        {!searching && siblings.length > 1 && (
           <div className="mt-3 grid grid-cols-3 gap-1.5">
-            {folders.map((folder) => {
+            {siblings.map((folder) => {
               const on = openFolder === folder.id;
               return (
                 <button
@@ -194,17 +332,6 @@ export default function DocList({
                 </button>
               );
             })}
-            {(counts.get(NO_FOLDER) ?? 0) > 0 && (
-              <button
-                type="button"
-                onClick={() => goFolder(NO_FOLDER)}
-                className={`rounded-xl px-1 py-2.5 text-base leading-tight ${
-                  inNoFolder ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-500"
-                }`}
-              >
-                분류 안 함
-              </button>
-            )}
           </div>
         )}
 
@@ -246,26 +373,56 @@ export default function DocList({
         <p className="mx-5 mt-4 rounded-xl bg-red-50 px-4 py-3 text-base text-red-600">{error}</p>
       )}
 
-      {atRoot ? (
-        <FolderHome
-          folders={folders}
+      {!searching && !inNoFolder && (
+        <FolderSection
+          folders={children}
           counts={counts}
-          recent={recent}
+          noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
+          canAdd={path.length < MAX_FOLDER_DEPTH}
           editMode={editFolders}
           pending={pending}
           onToggleEdit={() => setEditFolders((v) => !v)}
+          onAdd={() => setNewFolderOpen(true)}
           onOpen={goFolder}
-          onCreate={(name) => run(() => createFolder(name))}
           onRename={(id, name) => run(() => renameFolder(id, name))}
-          onDelete={(f) => {
-            const n = counts.get(f.id) ?? 0;
-            const warn =
-              n > 0
-                ? `"${f.name}" 폴더를 지울까요?\n안에 있던 문서 ${n}개는 지워지지 않고 '분류 안 함' 으로 갑니다.`
-                : `"${f.name}" 폴더를 지울까요?`;
-            if (confirm(warn)) run(() => deleteFolder(f.id));
+          onDelete={(folder) => {
+            const docCount = counts.get(folder.id) ?? 0;
+            const subCount = childFolders(folders, folder.id).length;
+            const parts = [`"${folder.name}" 폴더를 지울까요?`];
+            if (subCount > 0) parts.push(`하위폴더 ${subCount}개도 같이 지워집니다.`);
+            if (docCount > 0)
+              parts.push(`안에 있던 문서 ${docCount}개는 지워지지 않고 '분류 안 함' 으로 갑니다.`);
+            if (confirm(parts.join("\n"))) run(() => deleteFolder(folder.id));
           }}
         />
+      )}
+
+      {atRoot ? (
+        recent.length > 0 && (
+          <>
+            <h2 className="border-t border-zinc-100 px-5 pb-1 pt-5 text-base font-semibold text-zinc-400">
+              최근 문서
+            </h2>
+            <ul className="divide-y divide-zinc-100">
+              {recent.map((doc) => {
+                const badge = fileBadge(doc.file_type);
+                return (
+                  <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${badge.className}`}
+                    >
+                      {badge.label}
+                    </span>
+                    <span className="truncate text-base">
+                      {doc.is_favorite && <span className="text-amber-400">★ </span>}
+                      {doc.title}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )
       ) : (
         <DocRows
           docs={sorted}
@@ -273,10 +430,13 @@ export default function DocList({
           empty={
             documents.length === 0
               ? "아직 올린 문서가 없습니다.\n오른쪽 아래 + 를 눌러 올려보세요."
-              : "찾는 문서가 없습니다."
+              : "이 폴더에는 문서가 없습니다."
           }
           menuId={menuId}
           showFolderName={searching}
+          selecting={selecting}
+          picked={picked}
+          onPick={togglePick}
           onMenu={(id) => setMenuId(menuId === id ? null : id)}
           onEdit={(doc) => {
             setEditing(doc);
@@ -297,16 +457,65 @@ export default function DocList({
             }
           }}
           onShared={() => router.refresh()}
+          onNotify={setToast}
         />
       )}
 
-      <Link
-        href="/upload"
-        aria-label="문서 올리기"
-        className="fixed bottom-6 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-3xl leading-none text-white shadow-lg active:bg-zinc-700"
-      >
-        +
-      </Link>
+      {!selecting && (
+        <Link
+          href="/upload"
+          aria-label="문서 올리기"
+          className="fixed bottom-6 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-3xl leading-none text-white shadow-lg active:bg-zinc-700"
+        >
+          +
+        </Link>
+      )}
+
+      {selecting && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 flex items-center gap-3 border-t border-zinc-200 bg-white px-5 py-4">
+          <span className="flex-1 text-lg font-semibold">{picked.length}개 선택</span>
+          {picked.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setPicked([])}
+              className="rounded-xl px-3 py-3 text-base text-zinc-500"
+            >
+              해제
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={picked.length === 0 || busy}
+            onClick={sharePicked}
+            className="rounded-xl bg-zinc-900 px-6 py-3.5 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40"
+          >
+            {busy ? "준비 중…" : "한 번에 보내기"}
+          </button>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-xl bg-zinc-900 px-5 py-3 text-lg text-white shadow-lg">
+          {toast}
+        </div>
+      )}
+
+      {newFolderOpen && (
+        <NewFolderSheet
+          parentName={currentFolder?.name ?? null}
+          pending={pending}
+          onClose={() => setNewFolderOpen(false)}
+          onCreate={(name) =>
+            run(async () => {
+              const result = await createFolder(name, openFolder);
+              if (result.ok) setNewFolderOpen(false);
+              return result;
+            })
+          }
+        />
+      )}
+
+      {kakaoDocs && <KakaoSheet docs={kakaoDocs} onClose={() => setKakaoDocs(null)} />}
 
       {editing && (
         <EditSheet
@@ -341,45 +550,47 @@ export default function DocList({
   );
 }
 
-/* ---------------- 첫 화면: 폴더 목록 ---------------- */
+/* ---------------- 폴더 칸 ---------------- */
 
-function FolderHome({
+function FolderSection({
   folders,
   counts,
-  recent,
+  noFolderCount,
+  canAdd,
   editMode,
   pending,
   onToggleEdit,
+  onAdd,
   onOpen,
-  onCreate,
   onRename,
   onDelete,
 }: {
   folders: Folder[];
   counts: Map<string, number>;
-  recent: DocView[];
+  noFolderCount: number;
+  canAdd: boolean;
   editMode: boolean;
   pending: boolean;
   onToggleEdit: () => void;
+  onAdd: () => void;
   onOpen: (id: string) => void;
-  onCreate: (name: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (folder: Folder) => void;
 }) {
-  const [newName, setNewName] = useState("");
-  const noFolderCount = counts.get(NO_FOLDER) ?? 0;
+  const nothing = folders.length === 0 && noFolderCount === 0;
+  if (nothing && !canAdd) return null;
 
   return (
     <>
       <div className="flex items-center justify-between px-5 pt-4">
-        <h2 className="text-base font-semibold text-zinc-400">폴더</h2>
-        <button
-          type="button"
-          onClick={onToggleEdit}
-          className="text-base text-zinc-400 underline"
-        >
-          {editMode ? "완료" : "편집"}
-        </button>
+        <h2 className="text-base font-semibold text-zinc-400">
+          {nothing ? "폴더 없음" : "폴더"}
+        </h2>
+        {folders.length > 0 && (
+          <button type="button" onClick={onToggleEdit} className="text-base text-zinc-400 underline">
+            {editMode ? "완료" : "편집"}
+          </button>
+        )}
       </div>
 
       {editMode ? (
@@ -431,7 +642,7 @@ function FolderHome({
             <button
               type="button"
               onClick={() => onOpen(NO_FOLDER)}
-              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-2 py-4 active:bg-zinc-100"
+              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100"
             >
               <span className="text-4xl leading-none">📁</span>
               <span className="text-center text-base font-semibold leading-tight text-zinc-500">
@@ -440,55 +651,20 @@ function FolderHome({
               <span className="text-base text-zinc-400">{noFolderCount}</span>
             </button>
           )}
-        </div>
-      )}
 
-      {editMode && (
-        <div className="flex gap-2 px-5 pt-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="새 폴더 이름"
-            className="min-w-0 flex-1 rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
-          />
-          <button
-            type="button"
-            disabled={pending || !newName.trim()}
-            onClick={() => {
-              onCreate(newName);
-              setNewName("");
-            }}
-            className="shrink-0 rounded-xl bg-zinc-900 px-5 text-lg font-semibold text-white disabled:opacity-40"
-          >
-            추가
-          </button>
+          {canAdd && (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 px-1 py-4 active:bg-zinc-50"
+            >
+              <span className="text-4xl leading-none text-zinc-300">+</span>
+              <span className="text-center text-base font-semibold leading-tight text-zinc-500">
+                새 폴더
+              </span>
+            </button>
+          )}
         </div>
-      )}
-
-      {recent.length > 0 && !editMode && (
-        <>
-          <h2 className="border-t border-zinc-100 px-5 pb-1 pt-5 text-base font-semibold text-zinc-400">
-            최근 문서
-          </h2>
-          <ul className="divide-y divide-zinc-100">
-            {recent.map((doc) => {
-              const badge = fileBadge(doc.file_type);
-              return (
-                <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                  <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                  <span className="truncate text-base">
-                    {doc.is_favorite && <span className="text-amber-400">★ </span>}
-                    {doc.title}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </>
       )}
     </>
   );
@@ -502,27 +678,37 @@ function DocRows({
   empty,
   menuId,
   showFolderName,
+  selecting,
+  picked,
+  onPick,
   onMenu,
   onEdit,
   onMove,
   onFavorite,
   onDelete,
   onShared,
+  onNotify,
 }: {
   docs: DocView[];
   folders: Folder[];
   empty: string;
   menuId: string | null;
   showFolderName: boolean;
+  selecting: boolean;
+  picked: string[];
+  onPick: (id: string) => void;
   onMenu: (id: string) => void;
   onEdit: (doc: DocView) => void;
   onMove: (doc: DocView) => void;
   onFavorite: (doc: DocView) => void;
   onDelete: (doc: DocView) => void;
   onShared: () => void;
+  onNotify: (message: string) => void;
 }) {
   if (docs.length === 0) {
-    return <p className="whitespace-pre-line px-5 py-16 text-center text-base text-zinc-400">{empty}</p>;
+    return (
+      <p className="whitespace-pre-line px-5 py-16 text-center text-base text-zinc-400">{empty}</p>
+    );
   }
 
   return (
@@ -530,8 +716,26 @@ function DocRows({
       {docs.map((doc) => {
         const badge = fileBadge(doc.file_type);
         const folderName = folders.find((f) => f.id === doc.folder_id)?.name;
+        const on = picked.includes(doc.id);
+
         return (
-          <li key={doc.id} className="relative flex items-center gap-3 px-5 py-4">
+          <li
+            key={doc.id}
+            onClick={selecting ? () => onPick(doc.id) : undefined}
+            className={`relative flex items-center gap-3 px-5 py-4 ${
+              selecting ? "cursor-pointer" : ""
+            } ${on ? "bg-zinc-50" : ""}`}
+          >
+            {selecting && (
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-base ${
+                  on ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300"
+                }`}
+              >
+                {on ? "✓" : ""}
+              </span>
+            )}
+
             <span
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold ${badge.className}`}
             >
@@ -559,18 +763,22 @@ function DocRows({
               </p>
             </div>
 
-            <ShareButton doc={doc} fileUrl={doc.fileUrl} onDone={onShared} />
+            {!selecting && (
+              <>
+                <ShareButton doc={doc} onDone={onShared} onNotify={onNotify} />
 
-            <button
-              type="button"
-              aria-label="메뉴"
-              onClick={() => onMenu(doc.id)}
-              className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100"
-            >
-              ⋯
-            </button>
+                <button
+                  type="button"
+                  aria-label="메뉴"
+                  onClick={() => onMenu(doc.id)}
+                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100"
+                >
+                  ⋯
+                </button>
+              </>
+            )}
 
-            {menuId === doc.id && (
+            {menuId === doc.id && !selecting && (
               <>
                 <button
                   type="button"
@@ -578,7 +786,7 @@ function DocRows({
                   className="fixed inset-0 z-10 cursor-default"
                   onClick={() => onMenu(doc.id)}
                 />
-                <div className="absolute right-4 top-14 z-20 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+                <div className="absolute right-4 top-14 z-20 w-44 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
                   <MenuItem label="수정" onClick={() => onEdit(doc)} />
                   <MenuItem label="폴더 이동" onClick={() => onMove(doc)} />
                   <MenuItem
@@ -609,7 +817,7 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className={`block w-full px-4 py-3 text-left text-base active:bg-zinc-50 ${
+      className={`block w-full px-4 py-3.5 text-left text-lg active:bg-zinc-50 ${
         danger ? "border-t border-zinc-100 text-red-600 active:bg-red-50" : ""
       }`}
     >
@@ -620,7 +828,15 @@ function MenuItem({
 
 /* ---------------- 아래에서 올라오는 창들 ---------------- */
 
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Sheet({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="fixed inset-0 z-30 flex items-end bg-black/40" onClick={onClose}>
       <div className="w-full rounded-t-2xl bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
@@ -631,13 +847,56 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+function NewFolderSheet({
+  parentName,
+  pending,
+  onClose,
+  onCreate,
+}: {
+  parentName: string | null;
+  pending: boolean;
+  onClose: () => void;
+  onCreate: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+
+  return (
+    <Sheet title={parentName ? `"${parentName}" 안에 새 폴더` : "새 폴더"} onClose={onClose}>
+      <input
+        value={name}
+        autoFocus
+        onChange={(e) => setName(e.target.value)}
+        placeholder="폴더 이름"
+        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          disabled={pending || !name.trim()}
+          onClick={() => onCreate(name)}
+          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40"
+        >
+          {pending ? "만드는 중…" : "만들기"}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
 function MoveSheet({
   doc,
   folders,
   onClose,
   onPick,
 }: {
-  doc: Doc;
+  doc: DocView;
   folders: Folder[];
   onClose: () => void;
   onPick: (folderId: string | null) => void;
@@ -646,21 +905,24 @@ function MoveSheet({
     <Sheet title="폴더 이동" onClose={onClose}>
       <p className="mb-3 truncate text-base text-zinc-500">{doc.title}</p>
       <ul className="max-h-[50vh] overflow-y-auto">
-        {folders.map((folder) => (
-          <li key={folder.id}>
-            <button
-              type="button"
-              onClick={() => onPick(folder.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg active:bg-zinc-50 ${
-                doc.folder_id === folder.id ? "font-bold" : ""
-              }`}
-            >
-              <span>📁</span>
-              <span className="flex-1 truncate">{folder.name}</span>
-              {doc.folder_id === folder.id && <span className="text-zinc-400">현재</span>}
-            </button>
-          </li>
-        ))}
+        {folders.map((folder) => {
+          const path = folderPath(folders, folder.id);
+          return (
+            <li key={folder.id}>
+              <button
+                type="button"
+                onClick={() => onPick(folder.id)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg active:bg-zinc-50 ${
+                  doc.folder_id === folder.id ? "font-bold" : ""
+                }`}
+              >
+                <span>📁</span>
+                <span className="flex-1 truncate">{path.map((f) => f.name).join(" › ")}</span>
+                {doc.folder_id === folder.id && <span className="text-zinc-400">현재</span>}
+              </button>
+            </li>
+          );
+        })}
         <li>
           <button
             type="button"
@@ -682,7 +944,7 @@ function EditSheet({
   onClose,
   onSave,
 }: {
-  doc: Doc;
+  doc: DocView;
   pending: boolean;
   onClose: () => void;
   onSave: (input: { title: string; tags: string[]; memo: string }) => void;
