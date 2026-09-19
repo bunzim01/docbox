@@ -18,6 +18,7 @@ import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
 import BackIcon from "./back-icon";
 import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
+import HomeIcon from "./home-icon";
 import KakaoIcon from "./kakao-icon";
 import QuickUpload from "./quick-upload";
 import ShareButton, { KakaoSheet } from "./share-button";
@@ -516,6 +517,21 @@ export default function DocList({
             + 새 폴더
           </button>
         </div>
+      )}
+
+      {!selecting && !atRoot && (
+        <button
+          type="button"
+          aria-label="첫 화면으로"
+          onClick={() => {
+            setQuery("");
+            goFolder(null);
+            window.scrollTo({ top: 0 });
+          }}
+          className="fixed bottom-6 left-5 z-20 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-200 bg-paper text-ink shadow-lg active:bg-zinc-100 sm:left-[max(1.25rem,calc(50%-28rem+1.25rem))] sm:h-12 sm:w-12 sm:hover:bg-zinc-100"
+        >
+          <HomeIcon className="h-7 w-7 sm:h-6 sm:w-6" />
+        </button>
       )}
 
       {!selecting && (

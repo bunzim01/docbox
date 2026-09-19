@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { requireAuth } from "@/lib/auth-server";
 import { listDocuments, listFolders, withFileUrl } from "@/lib/documents";
 import DocList from "./doc-list";
-import { logout } from "./login/actions";
 
 export default async function HomePage() {
   await connection();
@@ -18,11 +17,6 @@ export default async function HomePage() {
         <Suspense>
           <DocList documents={documents} folders={folders} />
         </Suspense>
-        <form action={logout} className="mx-auto w-full max-w-4xl px-5 pb-8 pt-2">
-          <button type="submit" className="text-base text-zinc-400 underline">
-            나가기
-          </button>
-        </form>
       </>
     );
   } catch (e) {
