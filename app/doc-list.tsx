@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { Doc, Folder } from "@/lib/documents";
 import { fileBadge, folderNameLines, formatDate, formatSize, parseTags } from "@/lib/format";
 import {
@@ -37,10 +37,29 @@ export default function DocList({
   const [editing, setEditing] = useState<Doc | null>(null);
   const [moving, setMoving] = useState<Doc | null>(null);
   const [editFolders, setEditFolders] = useState(false);
+  const [sort, setSort] = useState<"recent" | "name">("recent");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
   const searching = query.trim().length > 0;
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("docbox-sort") === "name") setSort("name");
+    } catch {
+      // 사생활 보호 모드 등에서 막히면 기본값(최신순)으로 둔다
+    }
+  }, []);
+
+  function toggleSort() {
+    const next = sort === "recent" ? "name" : "recent";
+    setSort(next);
+    try {
+      localStorage.setItem("docbox-sort", next);
+    } catch {
+      // 저장 못 해도 이번 화면에서는 그대로 동작한다
+    }
+  }
 
   function run(fn: () => Promise<Result>) {
     setError("");
@@ -102,6 +121,15 @@ export default function DocList({
     });
   }, [scoped, query, activeTags]);
 
+  const sorted = useMemo(() => {
+    if (sort === "recent") return shown; // 서버가 이미 최근 순으로 줬다
+    return [...shown].sort(
+      (a, b) =>
+        Number(b.is_favorite) - Number(a.is_favorite) ||
+        a.title.localeCompare(b.title, "ko"),
+    );
+  }, [shown, sort]);
+
   const atRoot = !openFolder && !searching;
   const recent = useMemo(() => documents.slice(0, 5), [documents]);
 
@@ -125,6 +153,15 @@ export default function DocList({
           <span className="shrink-0 text-base text-zinc-400">
             {searching ? `${shown.length}개` : `${scoped.length}개`}
           </span>
+          {!atRoot && (
+            <button
+              type="button"
+              onClick={toggleSort}
+              className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200"
+            >
+              {sort === "name" ? "가나다순" : "최신순"}
+            </button>
+          )}
         </div>
 
         <input
@@ -230,7 +267,7 @@ export default function DocList({
         />
       ) : (
         <DocRows
-          docs={shown}
+          docs={sorted}
           folders={folders}
           empty={
             documents.length === 0
