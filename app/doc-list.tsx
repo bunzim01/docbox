@@ -136,7 +136,7 @@ export default function DocList({
         />
 
         {!atRoot && !searching && folders.length > 0 && (
-          <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             {folders.map((folder) => {
               const on = openFolder === folder.id;
               return (
@@ -144,7 +144,7 @@ export default function DocList({
                   key={folder.id}
                   type="button"
                   onClick={() => goFolder(folder.id)}
-                  className={`shrink-0 rounded-full px-4 py-2 text-lg ${
+                  className={`rounded-xl px-2 py-2.5 text-base leading-tight ${
                     on ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-600"
                   }`}
                 >
@@ -156,7 +156,7 @@ export default function DocList({
               <button
                 type="button"
                 onClick={() => goFolder(NO_FOLDER)}
-                className={`shrink-0 rounded-full px-4 py-2 text-lg ${
+                className={`rounded-xl px-2 py-2.5 text-base leading-tight ${
                   inNoFolder ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-500"
                 }`}
               >
@@ -339,58 +339,62 @@ function FolderHome({
         </button>
       </div>
 
-      <ul className="mt-2">
-        {folders.map((folder) => (
-          <li key={folder.id} className="flex items-center gap-3 px-5 py-3.5">
-            <span className="text-3xl leading-none">📁</span>
-            {editMode ? (
-              <>
-                <input
-                  defaultValue={folder.name}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v && v !== folder.name) onRename(folder.id, v);
-                  }}
-                  className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-lg outline-none focus:border-zinc-900"
-                />
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => onDelete(folder)}
-                  className="shrink-0 rounded-lg px-3 py-2 text-base text-red-600 active:bg-red-50"
-                >
-                  삭제
-                </button>
-              </>
-            ) : (
+      {editMode ? (
+        <ul className="mt-2">
+          {folders.map((folder) => (
+            <li key={folder.id} className="flex items-center gap-3 px-5 py-3.5">
+              <span className="text-3xl leading-none">📁</span>
+              <input
+                defaultValue={folder.name}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v && v !== folder.name) onRename(folder.id, v);
+                }}
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-lg outline-none focus:border-zinc-900"
+              />
               <button
                 type="button"
-                onClick={() => onOpen(folder.id)}
-                className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+                disabled={pending}
+                onClick={() => onDelete(folder)}
+                className="shrink-0 rounded-lg px-3 py-2 text-base text-red-600 active:bg-red-50"
               >
-                <span className="truncate text-lg font-semibold">{folder.name}</span>
-                <span className="shrink-0 text-base text-zinc-400">
-                  {counts.get(folder.id) ?? 0}
-                </span>
+                삭제
               </button>
-            )}
-          </li>
-        ))}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-2 grid grid-cols-3 gap-3 px-5">
+          {folders.map((folder) => (
+            <button
+              key={folder.id}
+              type="button"
+              onClick={() => onOpen(folder.id)}
+              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-2 py-4 active:bg-zinc-100"
+            >
+              <span className="text-4xl leading-none">📁</span>
+              <span className="text-center text-base font-semibold leading-tight">
+                {folder.name}
+              </span>
+              <span className="text-base text-zinc-400">{counts.get(folder.id) ?? 0}</span>
+            </button>
+          ))}
 
-        {noFolderCount > 0 && !editMode && (
-          <li className="flex items-center gap-3 px-5 py-3.5">
-            <span className="text-3xl leading-none">📁</span>
+          {noFolderCount > 0 && (
             <button
               type="button"
               onClick={() => onOpen(NO_FOLDER)}
-              className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-2 py-4 active:bg-zinc-100"
             >
-              <span className="truncate text-lg font-semibold text-zinc-500">분류 안 함</span>
-              <span className="shrink-0 text-base text-zinc-400">{noFolderCount}</span>
+              <span className="text-4xl leading-none">📁</span>
+              <span className="text-center text-base font-semibold leading-tight text-zinc-500">
+                분류 안 함
+              </span>
+              <span className="text-base text-zinc-400">{noFolderCount}</span>
             </button>
-          </li>
-        )}
-      </ul>
+          )}
+        </div>
+      )}
 
       {editMode && (
         <div className="flex gap-2 px-5 pt-2">

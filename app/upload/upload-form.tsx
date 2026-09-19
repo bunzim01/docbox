@@ -26,7 +26,7 @@ export default function UploadForm({
 }) {
   const router = useRouter();
   const [folderId, setFolderId] = useState<string | null>(
-    folders.find((f) => f.name === "기타문서")?.id ?? folders[0]?.id ?? null,
+    folders[0]?.id ?? null,
   );
   const [rows, setRows] = useState<Row[]>([]);
   const [tags, setTags] = useState("");

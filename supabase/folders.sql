@@ -16,8 +16,7 @@ alter table public.folders enable row level security;
 insert into public.folders (name, sort_order) values
   ('제품소개서',          1),
   ('체크리스트(벤더용)',  2),
-  ('체크리스트(셀러용)',  3),
-  ('기타문서',            4)
+  ('체크리스트(셀러용)',  3)
 on conflict (name) do nothing;
 
 -- 3) 문서에 폴더 칸 추가 -------------------------------------------------
