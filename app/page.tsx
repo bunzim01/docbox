@@ -2,7 +2,14 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { requireAuth } from "@/lib/auth-server";
-import { listDocuments, listFolders, withFileUrl } from "@/lib/documents";
+import {
+  TRASH_DAYS,
+  listDocuments,
+  listFolders,
+  listTrashed,
+  purgeExpiredTrash,
+  withFileUrl,
+} from "@/lib/documents";
 import DocList from "./doc-list";
 
 export default async function HomePage() {
@@ -10,12 +17,29 @@ export default async function HomePage() {
   await requireAuth();
 
   try {
-    const [docs, folders] = await Promise.all([listDocuments(), listFolders()]);
+    // 보관 기간이 지난 휴지통 문서는 들어올 때 정리한다
+    await purgeExpiredTrash().catch(() => {});
+
+    const [docs, folders, trashedDocs] = await Promise.all([
+      listDocuments(),
+      listFolders(),
+      listTrashed(),
+    ]);
     const documents = docs.map(withFileUrl);
+
+    // 남은 날짜는 서버에서 계산해 내려준다 (브라우저와 시각이 달라 화면이 어긋나지 않게)
+    const now = Date.now();
+    const trashed = trashedDocs.map((doc) => ({
+      ...withFileUrl(doc),
+      daysLeft: Math.max(
+        0,
+        TRASH_DAYS - Math.floor((now - new Date(doc.deleted_at!).getTime()) / 86400000),
+      ),
+    }));
     return (
       <>
         <Suspense>
-          <DocList documents={documents} folders={folders} />
+          <DocList documents={documents} folders={folders} trashed={trashed} />
         </Suspense>
       </>
     );

@@ -12,6 +12,14 @@ export const MAX_FOLDER_DEPTH = 3;
 
 export type DocView = Doc & { fileUrl: string };
 
+/** 휴지통에 보관하는 기간 */
+export const TRASH_DAYS = 30;
+
+/** trash.sql 을 아직 실행하지 않은 상태(deleted_at 칸 없음)인지 */
+function noTrashColumn(error: { code?: string; message?: string } | null): boolean {
+  return !!error && (error.code === "42703" || /deleted_at/.test(error.message ?? ""));
+}
+
 export type Doc = {
   id: string;
   title: string;
@@ -25,6 +33,8 @@ export type Doc = {
   last_sent_at: string | null;
   created_at: string;
   folder_id: string | null;
+  /** 휴지통에 들어간 시각. 비어 있으면 정상 문서 */
+  deleted_at?: string | null;
 };
 
 export async function listFolders(): Promise<Folder[]> {
@@ -38,17 +48,52 @@ export async function listFolders(): Promise<Folder[]> {
   return (data ?? []) as Folder[];
 }
 
-/** 문서함 목록: 즐겨찾기 먼저 → 최근 보낸 순 → 최근 올린 순 */
+/** 문서함 목록: 즐겨찾기 먼저 → 최근 보낸 순 → 최근 올린 순 (휴지통에 있는 것은 제외) */
 export async function listDocuments(): Promise<Doc[]> {
-  const { data, error } = await supabase()
-    .from("documents")
-    .select("*")
-    .order("is_favorite", { ascending: false })
-    .order("last_sent_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false });
+  const query = () =>
+    supabase()
+      .from("documents")
+      .select("*")
+      .order("is_favorite", { ascending: false })
+      .order("last_sent_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+
+  let { data, error } = await query().is("deleted_at", null);
+  // 휴지통 SQL 을 아직 안 돌렸어도 앱은 열리게 한다
+  if (noTrashColumn(error)) ({ data, error } = await query());
 
   if (error) throw new Error(error.message);
   return (data ?? []) as Doc[];
+}
+
+/** 휴지통 목록 (최근에 지운 순) */
+export async function listTrashed(): Promise<Doc[]> {
+  const { data, error } = await supabase()
+    .from("documents")
+    .select("*")
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+
+  if (noTrashColumn(error)) return [];
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Doc[];
+}
+
+/** 휴지통에서 보관 기간이 지난 문서를 파일까지 완전히 지운다 */
+export async function purgeExpiredTrash(): Promise<void> {
+  const cutoff = new Date(Date.now() - TRASH_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const sb = supabase();
+  const { data, error } = await sb
+    .from("documents")
+    .select("id, file_path")
+    .not("deleted_at", "is", null)
+    .lt("deleted_at", cutoff);
+
+  if (error || !data || data.length === 0) return;
+
+  const paths = data.map((d) => d.file_path).filter(Boolean);
+  if (paths.length > 0) await sb.storage.from("docs").remove(paths);
+  await sb.from("documents").delete().in("id", data.map((d) => d.id)).not("deleted_at", "is", null);
 }
 
 export async function getDocument(id: string): Promise<Doc | null> {
@@ -59,7 +104,9 @@ export async function getDocument(id: string): Promise<Doc | null> {
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return (data as Doc) ?? null;
+  const doc = (data as Doc) ?? null;
+  // 휴지통에 있는 문서는 받는 사람에게 열리지 않는다
+  return doc?.deleted_at ? null : doc;
 }
 
 /**

@@ -26,24 +26,33 @@ import {
   createFolder,
   deleteDocument,
   deleteFolder,
+  emptyTrash,
   markSentMany,
   moveDocument,
+  purgeDocument,
   renameFolder,
+  restoreDocument,
   setFavorite,
   updateDocument,
 } from "./actions";
 
 /** 폴더가 지정되지 않은 문서를 모아두는 가짜 폴더 */
 const NO_FOLDER = "none";
+/** 휴지통 화면 */
+const TRASH = "trash";
+
+type TrashedDoc = DocView & { daysLeft: number };
 
 type Result = { ok: true } | { ok: false; error: string };
 
 export default function DocList({
   documents,
   folders,
+  trashed,
 }: {
   documents: DocView[];
   folders: Folder[];
+  trashed: TrashedDoc[];
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -290,6 +299,28 @@ export default function DocList({
     </>
   );
 
+  if (openFolder === TRASH && !searching) {
+    return (
+      <TrashView
+        trashed={trashed}
+        pending={pending}
+        error={error}
+        onBack={() => goFolder(null)}
+        onRestore={(id) => run(() => restoreDocument(id))}
+        onPurge={(doc) => {
+          if (confirm(`"${doc.title}" 을(를) 완전히 지울까요?\n파일까지 지워지고 되돌릴 수 없습니다.`)) {
+            run(() => purgeDocument(doc.id));
+          }
+        }}
+        onEmpty={() => {
+          if (confirm(`휴지통의 문서 ${trashed.length}개를 모두 완전히 지울까요?\n되돌릴 수 없습니다.`)) {
+            run(() => emptyTrash());
+          }
+        }}
+      />
+    );
+  }
+
   const title = searching
     ? "전체 검색"
     : inNoFolder
@@ -460,7 +491,7 @@ export default function DocList({
         }}
         onDelete={(doc) => {
           setMenuId(null);
-          if (confirm(`"${doc.title}" 을(를) 삭제할까요?\n파일도 같이 지워집니다.`)) {
+          if (confirm(`"${doc.title}" 을(를) 휴지통으로 옮길까요?\n30일 안에는 복원할 수 있습니다.`)) {
             run(() => deleteDocument(doc.id));
           }
         }}
@@ -500,6 +531,18 @@ export default function DocList({
 
       {!selecting && !searching && !inNoFolder && (
         <QuickUpload folderId={openFolder} />
+      )}
+
+      {atRoot && trashed.length > 0 && (
+        <div className="px-5 pt-8">
+          <button
+            type="button"
+            onClick={() => goFolder(TRASH)}
+            className="text-base text-zinc-500 underline"
+          >
+            휴지통 {trashed.length}
+          </button>
+        </div>
       )}
 
       {!searching &&
@@ -634,6 +677,97 @@ export default function DocList({
             })
           }
         />
+      )}
+    </main>
+  );
+}
+
+/* ---------------- 휴지통 ---------------- */
+
+function TrashView({
+  trashed,
+  pending,
+  error,
+  onBack,
+  onRestore,
+  onPurge,
+  onEmpty,
+}: {
+  trashed: TrashedDoc[];
+  pending: boolean;
+  error: string;
+  onBack: () => void;
+  onRestore: (id: string) => void;
+  onPurge: (doc: TrashedDoc) => void;
+  onEmpty: () => void;
+}) {
+  return (
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-8">
+      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-cream/95 px-5 pb-3 pt-3 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="뒤로"
+            className="-ml-3 flex h-14 w-12 shrink-0 items-center justify-center rounded-2xl text-ink active:bg-zinc-100 sm:-ml-2 sm:h-10 sm:w-10 sm:hover:bg-zinc-100"
+          >
+            <BackIcon className="h-8 w-8 sm:h-6 sm:w-6" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold">휴지통</h1>
+            <p className="truncate text-base text-zinc-500">30일 뒤 자동으로 완전히 지워집니다</p>
+          </div>
+          {trashed.length > 0 && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onEmpty}
+              className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-red-700 active:bg-zinc-200 sm:hover:bg-zinc-200"
+            >
+              비우기
+            </button>
+          )}
+        </div>
+      </header>
+
+      {error && (
+        <p className="mx-5 mt-4 rounded-xl bg-red-50 px-4 py-3 text-base text-red-600">{error}</p>
+      )}
+
+      {trashed.length === 0 ? (
+        <p className="px-5 py-16 text-center text-base text-zinc-400">휴지통이 비어 있습니다.</p>
+      ) : (
+        <ul className="divide-y divide-zinc-100">
+          {trashed.map((doc) => (
+            <li key={doc.id} className="flex items-center gap-2.5 px-5 py-4 sm:gap-3 sm:py-2">
+              <FileIcon fileType={doc.file_type} className="h-10 w-8 shrink-0 sm:h-7 sm:w-[22px]" />
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 font-semibold leading-snug sm:line-clamp-1 sm:text-lg sm:font-normal">
+                  {doc.title}
+                </p>
+                <p className="mt-0.5 text-base text-zinc-400">
+                  {doc.daysLeft > 0 ? `${doc.daysLeft}일 뒤 완전 삭제` : "곧 완전 삭제"}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => onRestore(doc.id)}
+                className="shrink-0 rounded-xl bg-zinc-900 px-4 py-3 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:py-1.5 sm:hover:bg-zinc-700"
+              >
+                복원
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => onPurge(doc)}
+                className="shrink-0 rounded-xl px-2 py-3 text-base text-red-700 underline disabled:opacity-40 sm:py-1.5"
+              >
+                완전 삭제
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </main>
   );

@@ -92,25 +92,88 @@ export async function setFavorite(id: string, value: boolean): Promise<Result> {
   return { ok: true };
 }
 
-/** 문서 삭제 — 저장된 파일까지 같이 지운다 */
+/** 문서를 휴지통으로 옮긴다 — 파일은 그대로 두고 표시만 한다 (30일간 복원 가능) */
 export async function deleteDocument(id: string): Promise<Result> {
+  await requireAuth();
+
+  const { error } = await supabase()
+    .from("documents")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    // 휴지통 SQL 을 아직 안 돌린 상태에서는 지우지 않는다 (복구할 수 없게 되므로)
+    if (error.code === "42703" || /deleted_at/.test(error.message)) {
+      return { ok: false, error: "휴지통 준비가 안 됐습니다. supabase/trash.sql 을 먼저 실행해 주세요." };
+    }
+    return { ok: false, error: error.message };
+  }
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** 휴지통에서 되살린다 (원래 폴더가 사라졌으면 '분류 안 함' 으로) */
+export async function restoreDocument(id: string): Promise<Result> {
+  await requireAuth();
+
+  const { error } = await supabase().from("documents").update({ deleted_at: null }).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** 휴지통에 있는 문서 하나를 파일까지 완전히 지운다 */
+export async function purgeDocument(id: string): Promise<Result> {
   await requireAuth();
 
   const sb = supabase();
   const { data: doc, error: findError } = await sb
     .from("documents")
-    .select("file_path")
+    .select("file_path, deleted_at")
     .eq("id", id)
     .maybeSingle();
 
   if (findError) return { ok: false, error: findError.message };
+  if (!doc) return { ok: true };
+  // 휴지통에 있는 것만 완전 삭제할 수 있다
+  if (!doc.deleted_at) return { ok: false, error: "휴지통에 있는 문서만 완전히 지울 수 있습니다." };
 
-  if (doc?.file_path) {
+  if (doc.file_path) {
     const { error: fileError } = await sb.storage.from(BUCKET).remove([doc.file_path]);
     if (fileError) return { ok: false, error: `파일 삭제 실패: ${fileError.message}` };
   }
 
-  const { error } = await sb.from("documents").delete().eq("id", id);
+  const { error } = await sb.from("documents").delete().eq("id", id).not("deleted_at", "is", null);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** 휴지통 비우기 — 휴지통에 있는 것만 지운다 */
+export async function emptyTrash(): Promise<Result> {
+  await requireAuth();
+
+  const sb = supabase();
+  const { data, error: findError } = await sb
+    .from("documents")
+    .select("id, file_path")
+    .not("deleted_at", "is", null);
+
+  if (findError) return { ok: false, error: findError.message };
+  if (!data || data.length === 0) return { ok: true };
+
+  const paths = data.map((d) => d.file_path).filter(Boolean);
+  if (paths.length > 0) {
+    const { error: fileError } = await sb.storage.from(BUCKET).remove(paths);
+    if (fileError) return { ok: false, error: `파일 삭제 실패: ${fileError.message}` };
+  }
+
+  const { error } = await sb
+    .from("documents")
+    .delete()
+    .in("id", data.map((d) => d.id))
+    .not("deleted_at", "is", null);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/");
