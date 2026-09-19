@@ -40,6 +40,7 @@ export default function ShareButton({
         const result = await shareFiles([doc]);
         if (result.status === "shared") {
           setReady(false);
+          onNotify("✓ 보냈습니다");
           await markSent(doc.id);
           onDone();
           return;

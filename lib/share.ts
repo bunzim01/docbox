@@ -106,3 +106,36 @@ export async function copyShareLinks(ids: string[]): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * 자주 보내는 파일을 미리 받아 둔다 — 누르는 즉시 공유창이 뜨게.
+ * 데이터 요금을 아끼려고: 절약 모드면 안 받고, 와이파이가 확실할 때만 큰 파일을 받는다.
+ * (아이폰은 연결 종류를 알려주지 않아 작은 파일만 받는다)
+ */
+export function prefetchForShare(items: (ShareItem & { file_size: number | null })[]): void {
+  if (!canShareFiles()) return; // PC 는 링크 복사라 필요 없다
+
+  const conn = (navigator as Navigator & {
+    connection?: { saveData?: boolean; type?: string; effectiveType?: string };
+  }).connection;
+  if (conn?.saveData) return;
+
+  const onWifi = conn?.type === "wifi" || conn?.type === "ethernet";
+  const slow = conn?.effectiveType === "2g" || conn?.effectiveType === "slow-2g";
+  if (slow) return;
+
+  const maxBytes = onWifi ? 30 * 1024 * 1024 : 5 * 1024 * 1024;
+  const targets = items
+    .filter((item) => !cache.has(item.id) && (item.file_size ?? Infinity) <= maxBytes)
+    .slice(0, onWifi ? 4 : 2);
+  if (targets.length === 0) return;
+
+  const run = () => {
+    // 하나씩 차례로, 실패해도 조용히 넘어간다 (누를 때 다시 받으면 된다)
+    targets
+      .reduce((p, item) => p.then(() => prepareFiles([item]).catch(() => {})), Promise.resolve())
+      .catch(() => {});
+  };
+  if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 4000 });
+  else setTimeout(run, 1500);
+}

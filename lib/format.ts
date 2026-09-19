@@ -134,3 +134,52 @@ export function formatDateTiny(iso: string | null): string {
   const d = formatDateShort(iso); // 2026-09-16
   return d ? `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}` : "";
 }
+
+/* ---------------- 검색 (초성 지원) ---------------- */
+
+const CHOSUNG = [
+  "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ",
+  "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+];
+
+/** "소다산 제안서" → "ㅅㄷㅅ ㅈㅇㅅ" (한글이 아닌 글자는 그대로) */
+export function toChosung(text: string): string {
+  let out = "";
+  for (const ch of text) {
+    const code = ch.charCodeAt(0);
+    if (code >= 0xac00 && code <= 0xd7a3) out += CHOSUNG[Math.floor((code - 0xac00) / 588)];
+    else out += ch;
+  }
+  return out;
+}
+
+/** 검색어에 완성된 한글(가~힣)이 없고 초성 자음이 들어 있으면 초성 검색으로 본다 */
+function isChosungQuery(q: string): boolean {
+  return /[ㄱ-ㅎ]/.test(q) && !/[가-힣]/.test(q);
+}
+
+/**
+ * 검색어가 글에 들어 있는지.
+ * - "소다산" 처럼 그냥 치면 포함 여부
+ * - "ㅅㄷㅅ" 처럼 초성만 치면 초성으로 비교 ("ㅅㄷㅅ 2025" 처럼 숫자·영문을 섞어도 된다)
+ * - 띄어쓰기로 나눈 낱말은 모두 들어 있어야 한다 ("소다산 주방")
+ */
+export function matchesQuery(text: string, query: string): boolean {
+  const hay = text.toLowerCase();
+  const hayChosung = toChosung(hay);
+  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  return words.every((w) => (isChosungQuery(w) ? hayChosung.includes(w) : hay.includes(w)));
+}
+
+/**
+ * 문서를 눌렀을 때 바로 열 주소.
+ * PDF 는 브라우저가 직접 보여주고, 오피스 문서는 브라우저가 못 열어서 온라인 뷰어로 보낸다.
+ * 그 외(한글 등)는 파일 주소 그대로 — 기기에서 내려받아 연다.
+ */
+export function viewUrl(fileUrl: string, fileType: string | null): string {
+  const t = (fileType ?? "").toLowerCase();
+  if (["ppt", "pptx", "doc", "docx", "xls", "xlsx"].includes(t)) {
+    return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}`;
+  }
+  return fileUrl;
+}

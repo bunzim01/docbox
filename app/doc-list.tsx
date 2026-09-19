@@ -13,9 +13,11 @@ import {
   formatDateShort,
   formatDateTiny,
   formatSize,
+  matchesQuery,
   parseTags,
+  viewUrl,
 } from "@/lib/format";
-import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import { canShareFiles, copyShareLinks, prefetchForShare, shareFiles } from "@/lib/share";
 import BackIcon from "./back-icon";
 import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
@@ -170,14 +172,16 @@ export default function DocList({
   }, [scoped]);
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     return scoped.filter((doc) => {
       if (activeTags.length > 0 && !activeTags.every((t) => doc.tags?.includes(t))) return false;
       if (!q) return true;
-      const haystack = [doc.title, doc.memo ?? "", ...(doc.tags ?? [])].join(" ").toLowerCase();
-      return haystack.includes(q);
+      // 폴더 이름으로도 찾을 수 있게 한다 ("ㅅㄷㅅ" → 소다산 폴더 안 문서들)
+      const folderNames = folderPath(folders, doc.folder_id).map((f) => f.name);
+      const haystack = [doc.title, doc.memo ?? "", ...(doc.tags ?? []), ...folderNames].join(" ");
+      return matchesQuery(haystack, q);
     });
-  }, [scoped, query, activeTags]);
+  }, [scoped, query, activeTags, folders]);
 
   const sorted = useMemo(() => {
     if (sort === "recent") return shown; // 서버가 이미 최근 순으로 줬다
@@ -190,7 +194,34 @@ export default function DocList({
 
   const atRoot = !openFolder && !searching;
   const uploadHref = openFolder && !inNoFolder ? `/upload?f=${openFolder}` : "/upload";
-  const recent = useMemo(() => documents.slice(0, 5), [documents]);
+  /** 첫 화면 '바로 보내기' — 즐겨찾기 먼저, 그다음 많이 보낸 순 */
+  const quick = useMemo(
+    () =>
+      documents
+        .filter((d) => d.is_favorite || d.sent_count > 0)
+        .sort(
+          (a, b) =>
+            Number(b.is_favorite) - Number(a.is_favorite) ||
+            b.sent_count - a.sent_count ||
+            (b.last_sent_at ?? "").localeCompare(a.last_sent_at ?? ""),
+        )
+        .slice(0, 8),
+    [documents],
+  );
+  /** 아직 보낸 적도 즐겨찾기도 없으면 최근 올린 문서를 보여준다 */
+  const recent = useMemo(
+    () =>
+      [...documents]
+        .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+        .slice(0, 5),
+    [documents],
+  );
+  const homeList = quick.length > 0 ? quick : recent;
+
+  // 자주 보내는 파일은 미리 받아 둔다 → 누르는 즉시 공유창
+  useEffect(() => {
+    prefetchForShare(quick);
+  }, [quick]);
   const pickedDocs = useMemo(
     () => documents.filter((d) => picked.includes(d.id)),
     [documents, picked],
@@ -209,6 +240,7 @@ export default function DocList({
       if (canShareFiles()) {
         const result = await shareFiles(pickedDocs);
         if (result.status === "shared") {
+          setToast(`✓ ${picked.length}개 보냈습니다`);
           await markSentMany(picked);
           setSelecting(false);
           setPicked([]);
@@ -501,26 +533,37 @@ export default function DocList({
       />
 
       {atRoot ? (
-        recent.length > 0 && (
+        homeList.length > 0 && (
           <>
             <h2 className="border-t border-zinc-100 px-5 pb-1 pt-5 text-base font-semibold text-zinc-400">
-              최근 문서
+              {quick.length > 0 ? "바로 보내기" : "최근 올린 문서"}
+              {quick.length > 0 && (
+                <span className="ml-2 font-normal text-zinc-400">★ 즐겨찾기 · 자주 보낸 문서</span>
+              )}
             </h2>
             <ul className="divide-y divide-zinc-100">
-              {recent.map((doc) => (
+              {homeList.map((doc) => (
                 <li
                   key={doc.id}
                   className="flex items-center gap-3 px-5 py-3 sm:py-1.5 sm:hover:bg-zinc-100"
                 >
                   <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
                   <a
-                    href={`/s/${doc.id}`}
+                    href={viewUrl(doc.fileUrl, doc.file_type)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-w-0 flex-1 truncate text-lg hover:underline"
+                    className="min-w-0 flex-1 hover:underline"
                   >
-                    {doc.is_favorite && <span className="text-gold">★ </span>}
-                    {doc.title}
+                    <span className="line-clamp-2 text-lg leading-snug sm:line-clamp-1">
+                      {doc.is_favorite && <span className="text-gold">★ </span>}
+                      {doc.title}
+                    </span>
+                    <span className="block truncate text-base text-zinc-400">
+                      {folderPath(folders, doc.folder_id)
+                        .map((f) => f.name)
+                        .join(" › ") || "분류 안 함"}
+                      {doc.sent_count > 0 ? ` · ${doc.sent_count}번 보냄` : ""}
+                    </span>
                   </a>
                   <ShareButton doc={doc} onDone={() => router.refresh()} onNotify={setToast} />
                 </li>
@@ -1058,7 +1101,7 @@ function DocRows({
                   <span className="line-clamp-2 sm:line-clamp-1">{doc.title}</span>
                 ) : (
                   <a
-                    href={`/s/${doc.id}`}
+                    href={viewUrl(doc.fileUrl, doc.file_type)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="line-clamp-2 hover:underline sm:line-clamp-1"
