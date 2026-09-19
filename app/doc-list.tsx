@@ -114,7 +114,7 @@ export default function DocList({
               type="button"
               onClick={() => goFolder(null)}
               aria-label="문서함으로"
-              className="-ml-2 rounded-lg px-2 py-1 text-xl text-zinc-400 active:bg-zinc-100"
+              className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100"
             >
               ←
             </button>

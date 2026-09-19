@@ -115,7 +115,11 @@ export default function UploadForm({
   return (
     <main className="flex flex-1 flex-col px-5 pb-10 pt-5">
       <header className="mb-5 flex items-center gap-3">
-        <Link href="/" className="-ml-2 rounded-lg px-2 py-1 text-xl text-zinc-400 active:bg-zinc-100">
+        <Link
+          href="/"
+          aria-label="문서함으로"
+          className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100"
+        >
           ←
         </Link>
         <h1 className="text-3xl font-bold">문서 올리기</h1>
