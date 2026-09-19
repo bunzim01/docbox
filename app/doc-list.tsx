@@ -11,6 +11,7 @@ import {
   folderNameLines,
   folderPath,
   formatDate,
+  formatDateShort,
   formatSize,
   parseTags,
 } from "@/lib/format";
@@ -51,6 +52,7 @@ export default function DocList({
   const [moving, setMoving] = useState<DocView | null>(null);
   const [editFolders, setEditFolders] = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [renaming, setRenaming] = useState<Folder | null>(null);
   const [sort, setSort] = useState<"recent" | "name">("name"); // 기본 가나다순
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
@@ -278,6 +280,16 @@ export default function DocList({
             {searching ? `${shown.length}개` : `${scoped.length}개`}
           </span>
 
+          {!searching && !inNoFolder && path.length < MAX_FOLDER_DEPTH && (
+            <button
+              type="button"
+              onClick={() => setNewFolderOpen(true)}
+              className="hidden shrink-0 rounded-lg bg-zinc-100 px-4 py-2 text-base text-zinc-600 sm:block sm:hover:bg-zinc-200"
+            >
+              새 폴더
+            </button>
+          )}
+
           <Link
             href="/upload"
             className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
@@ -320,7 +332,7 @@ export default function DocList({
         />
 
         {!searching && siblings.length > 1 && (
-          <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5 md:grid-cols-6">
+          <div className="mt-3 grid grid-cols-3 gap-1.5 sm:hidden">
             {siblings.map((folder) => {
               const on = openFolder === folder.id;
               return (
@@ -435,6 +447,19 @@ export default function DocList({
         <DocRows
           docs={sorted}
           folders={folders}
+          folderRows={searching || inNoFolder ? [] : children}
+          folderCounts={counts}
+          onOpenFolder={goFolder}
+          onRenameFolder={(f) => setRenaming(f)}
+          onDeleteFolder={(folder) => {
+            const docCount = counts.get(folder.id) ?? 0;
+            const subCount = childFolders(folders, folder.id).length;
+            const parts = [`"${folder.name}" 폴더를 지울까요?`];
+            if (subCount > 0) parts.push(`하위폴더 ${subCount}개도 같이 지워집니다.`);
+            if (docCount > 0)
+              parts.push(`안에 있던 문서 ${docCount}개는 지워지지 않고 '분류 안 함' 으로 갑니다.`);
+            if (confirm(parts.join("\n"))) run(() => deleteFolder(folder.id));
+          }}
           empty={
             documents.length === 0
               ? "아직 올린 문서가 없습니다.\n[업로드] 버튼으로 올려보세요."
@@ -524,6 +549,21 @@ export default function DocList({
         />
       )}
 
+      {renaming && (
+        <RenameFolderSheet
+          folder={renaming}
+          pending={pending}
+          onClose={() => setRenaming(null)}
+          onSave={(name: string) =>
+            run(async () => {
+              const result = await renameFolder(renaming.id, name);
+              if (result.ok) setRenaming(null);
+              return result;
+            })
+          }
+        />
+      )}
+
       {kakaoDocs && <KakaoSheet docs={kakaoDocs} onClose={() => setKakaoDocs(null)} />}
 
       {editing && (
@@ -591,7 +631,7 @@ function FolderSection({
 
   return (
     <>
-      <div className="flex items-center justify-between px-5 pt-4">
+      <div className="flex items-center justify-between px-5 pt-4 sm:hidden">
         <h2 className="text-base font-semibold text-zinc-400">
           {nothing ? "폴더 없음" : "폴더"}
         </h2>
@@ -603,7 +643,7 @@ function FolderSection({
       </div>
 
       {editMode ? (
-        <ul className="mt-2">
+        <ul className="mt-2 sm:hidden">
           {folders.map((folder) => (
             <li key={folder.id} className="flex items-center gap-3 px-5 py-3.5">
               <span className="text-3xl leading-none">📁</span>
@@ -627,7 +667,7 @@ function FolderSection({
           ))}
         </ul>
       ) : (
-        <div className="mt-2 grid grid-cols-3 gap-2 px-5 sm:grid-cols-5 md:grid-cols-6">
+        <div className="mt-2 grid grid-cols-3 gap-2 px-5 sm:hidden">
           {folders.map((folder) => (
             <button
               key={folder.id}
@@ -686,6 +726,11 @@ function FolderSection({
 function DocRows({
   docs,
   folders,
+  folderRows,
+  folderCounts,
+  onOpenFolder,
+  onRenameFolder,
+  onDeleteFolder,
   empty,
   menuId,
   showFolderName,
@@ -702,6 +747,11 @@ function DocRows({
 }: {
   docs: DocView[];
   folders: Folder[];
+  folderRows: Folder[];
+  folderCounts: Map<string, number>;
+  onOpenFolder: (id: string) => void;
+  onRenameFolder: (folder: Folder) => void;
+  onDeleteFolder: (folder: Folder) => void;
   empty: string;
   menuId: string | null;
   showFolderName: boolean;
@@ -716,7 +766,9 @@ function DocRows({
   onShared: () => void;
   onNotify: (message: string) => void;
 }) {
-  if (docs.length === 0) {
+  const [folderMenu, setFolderMenu] = useState<string | null>(null);
+
+  if (docs.length === 0 && folderRows.length === 0) {
     return (
       <p className="whitespace-pre-line px-5 py-16 text-center text-base text-zinc-400">{empty}</p>
     );
@@ -724,6 +776,69 @@ function DocRows({
 
   return (
     <ul className="divide-y divide-zinc-100">
+      {/* PC 에서는 탐색기처럼 폴더도 같은 목록에 줄로 */}
+      {folderRows.map((folder) => (
+        <li
+          key={folder.id}
+          className="group relative hidden items-center gap-3 px-5 py-1.5 hover:bg-zinc-100 sm:flex"
+        >
+          <button
+            type="button"
+            onClick={() => onOpenFolder(folder.id)}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <span className="shrink-0 text-2xl leading-none">📁</span>
+            <span className="truncate text-lg">{folder.name}</span>
+            {(folderCounts.get(folder.id) ?? 0) > 0 && (
+              <span className="shrink-0 text-base text-zinc-400">
+                {folderCounts.get(folder.id)}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            aria-label="폴더 메뉴"
+            onClick={() => setFolderMenu(folderMenu === folder.id ? null : folder.id)}
+            className="shrink-0 rounded-lg px-2 py-1 text-xl leading-none text-zinc-400 opacity-0 hover:bg-zinc-200 group-hover:opacity-100"
+          >
+            ⋯
+          </button>
+
+          <span className="hidden w-32 shrink-0 text-right text-base text-zinc-400 md:block">
+            폴더
+          </span>
+
+          {folderMenu === folder.id && (
+            <>
+              <button
+                type="button"
+                aria-label="닫기"
+                className="fixed inset-0 z-10 cursor-default"
+                onClick={() => setFolderMenu(null)}
+              />
+              <div className="absolute right-24 top-8 z-20 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+                <MenuItem
+                  label="이름 변경"
+                  onClick={() => {
+                    setFolderMenu(null);
+                    onRenameFolder(folder);
+                  }}
+                />
+                <MenuItem
+                  label="삭제"
+                  danger
+                  onClick={() => {
+                    setFolderMenu(null);
+                    onDeleteFolder(folder);
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </li>
+      ))}
+
       {docs.map((doc) => {
         const badge = fileBadge(doc.file_type);
         const folderName = folders.find((f) => f.id === doc.folder_id)?.name;
@@ -733,9 +848,9 @@ function DocRows({
           <li
             key={doc.id}
             onClick={selecting ? () => onPick(doc.id) : undefined}
-            className={`relative flex items-center gap-3 px-5 py-4 sm:py-2.5 sm:hover:bg-zinc-50 ${
+            className={`group relative flex items-center gap-3 px-5 py-4 sm:py-1.5 sm:hover:bg-zinc-100 ${
               selecting ? "cursor-pointer" : ""
-            } ${on ? "bg-zinc-50" : ""}`}
+            } ${on ? "bg-zinc-100" : ""}`}
           >
             {selecting && (
               <span
@@ -754,18 +869,18 @@ function DocRows({
             </span>
 
             <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1 font-semibold text-zinc-900">
+              <p className="flex items-center gap-1 font-semibold text-zinc-900 sm:text-lg sm:font-normal">
                 {doc.is_favorite && <span className="text-amber-400">★</span>}
                 <span className="truncate">{doc.title}</span>
               </p>
 
               {doc.tags?.length > 0 && (
-                <p className="mt-0.5 truncate text-base text-zinc-500">
+                <p className="mt-0.5 truncate text-base text-zinc-500 sm:hidden">
                   {doc.tags.map((t) => `#${t}`).join(" ")}
                 </p>
               )}
 
-              <p className="mt-0.5 truncate text-base text-zinc-400">
+              <p className="mt-0.5 truncate text-base text-zinc-400 sm:hidden">
                 {showFolderName && <span>📁 {folderName ?? "분류 안 함"} · </span>}
                 {doc.last_sent_at
                   ? `${formatDate(doc.last_sent_at)} 보냄`
@@ -774,18 +889,30 @@ function DocRows({
               </p>
             </div>
 
+            {showFolderName && (
+              <span className="hidden max-w-40 shrink-0 truncate text-base text-zinc-400 sm:block">
+                📁 {folderName ?? "분류 안 함"}
+              </span>
+            )}
+
             {!selecting && (
               <>
-                <ShareButton doc={doc} onDone={onShared} onNotify={onNotify} />
+                <div className="shrink-0 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                  <ShareButton doc={doc} onDone={onShared} onNotify={onNotify} />
+                </div>
 
                 <button
                   type="button"
                   aria-label="메뉴"
                   onClick={() => onMenu(doc.id)}
-                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100 sm:hover:bg-zinc-100"
+                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100 sm:opacity-0 sm:hover:bg-zinc-200 sm:group-hover:opacity-100"
                 >
                   ⋯
                 </button>
+
+                <span className="hidden w-32 shrink-0 text-right text-base text-zinc-400 md:block">
+                  {formatDateShort(doc.last_sent_at ?? doc.created_at)}
+                </span>
               </>
             )}
 
@@ -910,6 +1037,48 @@ function NewFolderSheet({
           className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:py-2.5 sm:hover:bg-zinc-700"
         >
           {pending ? "만드는 중…" : "만들기"}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+function RenameFolderSheet({
+  folder,
+  pending,
+  onClose,
+  onSave,
+}: {
+  folder: Folder;
+  pending: boolean;
+  onClose: () => void;
+  onSave: (name: string) => void;
+}) {
+  const [name, setName] = useState(folder.name);
+
+  return (
+    <Sheet title="폴더 이름 변경" onClose={onClose}>
+      <input
+        value={name}
+        autoFocus
+        onChange={(e) => setName(e.target.value)}
+        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600 sm:py-2.5 sm:hover:bg-zinc-50"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          disabled={pending || !name.trim() || name.trim() === folder.name}
+          onClick={() => onSave(name)}
+          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:py-2.5 sm:hover:bg-zinc-700"
+        >
+          {pending ? "저장 중…" : "저장"}
         </button>
       </div>
     </Sheet>

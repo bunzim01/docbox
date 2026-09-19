@@ -102,3 +102,11 @@ export function folderAndDescendants<T extends { id: string; parent_id: string |
   }
   return out;
 }
+
+/** PC 목록용 짧은 날짜: 2026-09-16 */
+const DATE_SHORT = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" });
+
+export function formatDateShort(iso: string | null): string {
+  if (!iso) return "";
+  return DATE_SHORT.format(new Date(iso));
+}
