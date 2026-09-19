@@ -12,7 +12,8 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-6">
       <form action={formAction} className="w-full max-w-sm">
-        <h1 className="mb-1 text-3xl font-bold text-zinc-900">라이크웨이 자료실</h1>
+        <p className="mb-2 text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY COMPANY</p>
+        <h1 className="mb-1 text-3xl font-bold text-ink">라이크웨이 자료실</h1>
         <p className="mb-8 text-base text-zinc-500">
           제안서를 모아두고 카톡으로 바로 보내기
         </p>
@@ -26,7 +27,7 @@ export default function LoginPage() {
           type="password"
           autoFocus
           autoComplete="current-password"
-          className="w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
+          className="w-full rounded-xl border border-zinc-300 bg-paper px-4 py-3.5 text-lg outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
         />
 
         {state.error && (

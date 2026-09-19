@@ -128,3 +128,9 @@ export function flattenFolders<
   }
   return out;
 }
+
+/** 폰 카드용 아주 짧은 날짜: 26.09.16 */
+export function formatDateTiny(iso: string | null): string {
+  const d = formatDateShort(iso); // 2026-09-16
+  return d ? `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}` : "";
+}

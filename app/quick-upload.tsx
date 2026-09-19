@@ -82,11 +82,11 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
         }}
         className={`flex w-full max-w-md cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 transition-colors ${
           dragging
-            ? "border-zinc-900 bg-zinc-100"
-            : "border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50"
+            ? "border-gold bg-gold-soft"
+            : "border-zinc-300 bg-paper hover:border-gold hover:bg-gold-soft/40"
         }`}
       >
-        <span className="text-4xl leading-none text-zinc-300">+</span>
+        <span className="text-4xl leading-none text-gold">+</span>
         <span className="mt-3 text-lg font-semibold text-zinc-700">
           {busy
             ? `올리는 중… (${done}/${total})`

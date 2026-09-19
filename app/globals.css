@@ -1,14 +1,42 @@
 @import "tailwindcss";
 
+/*
+ * 라이크웨이 톤 — office.likeway.co.kr 과 같은 값
+ * 크림 바탕 + 잉크(남색) 글씨 + 골드 포인트
+ */
+@theme {
+  --color-cream: #faf6ee;
+  --color-paper: #fffdf9;
+  --color-gold: #a97c2f;
+  --color-gold-soft: #f3e9d2;
+  --color-ink: #22304a;
+
+  /* 회색 계열을 따뜻한 베이지 톤으로 바꿔서 앱 전체가 한 번에 물든다 */
+  --color-zinc-50: #f5f0e5;
+  --color-zinc-100: #efe9dc;
+  --color-zinc-200: #e4dccb;
+  --color-zinc-300: #d3c9b4;
+  --color-zinc-400: #857c69; /* 보조 글씨 — 크림 바탕에서 읽히게 충분히 진하게 */
+  --color-zinc-500: #6b6353;
+  --color-zinc-600: #514a3d;
+  --color-zinc-700: #34466a;
+  --color-zinc-800: #2a3a59;
+  --color-zinc-900: #22304a;
+
+  --font-sans:
+    "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+
 html {
   /* 기본 16px → 17px. 글씨·여백이 같이 조금씩 커진다 (노안 대응) */
   font-size: 106.25%;
-
-  /* 아이폰/안드로이드 기본 한글 폰트 우선 */
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
-    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  letter-spacing: -0.01em;
 }
 
 /* 폰에서 입력창을 눌렀을 때 화면이 확대되지 않도록 */
@@ -17,4 +45,50 @@ textarea,
 select,
 button {
   font-size: inherit;
+  font-family: inherit;
+}
+
+/* 누르고 올릴 때 색이 부드럽게 바뀌도록 */
+a,
+button,
+label,
+li {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+/* 창이 뜰 때 살짝 떠오르는 느낌 */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sheet-in {
+  animation: sheet-in 0.18s ease-out;
+}
+.fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in,
+  .fade-in {
+    animation: none;
+  }
 }

@@ -4,7 +4,11 @@ import { requireAuth } from "@/lib/auth-server";
 import { listDocuments, listFolders } from "@/lib/documents";
 import UploadForm from "./upload-form";
 
-export default async function UploadPage() {
+export default async function UploadPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ f?: string }>;
+}) {
   await connection();
   await requireAuth();
 
@@ -28,5 +32,9 @@ export default async function UploadPage() {
     // 목록을 못 불러와도 업로드 자체는 되게 둔다
   }
 
-  return <UploadForm suggestedTags={suggestedTags} folders={folders} />;
+  // 방금 보던 폴더를 기본으로 골라 둔다
+  const { f } = await searchParams;
+  const fromFolder = folders.some((x) => x.id === f) ? (f as string) : null;
+
+  return <UploadForm suggestedTags={suggestedTags} folders={folders} fromFolder={fromFolder} />;
 }

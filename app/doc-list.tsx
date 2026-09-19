@@ -10,13 +10,14 @@ import {
   folderNameLines,
   flattenFolders,
   folderPath,
-  formatDate,
   formatDateShort,
-  formatSize,
+  formatDateTiny,
   parseTags,
 } from "@/lib/format";
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import BackIcon from "./back-icon";
 import FileIcon from "./file-icon";
+import FolderIcon from "./folder-icon";
 import KakaoIcon from "./kakao-icon";
 import QuickUpload from "./quick-upload";
 import ShareButton, { KakaoSheet } from "./share-button";
@@ -177,6 +178,7 @@ export default function DocList({
   }, [shown, sort]);
 
   const atRoot = !openFolder && !searching;
+  const uploadHref = openFolder && !inNoFolder ? `/upload?f=${openFolder}` : "/upload";
   const recent = useMemo(() => documents.slice(0, 5), [documents]);
   const pickedDocs = useMemo(
     () => documents.filter((d) => picked.includes(d.id)),
@@ -229,6 +231,64 @@ export default function DocList({
     }
   }
 
+  const tagChips = (
+    <>
+      {tagsHere.map((tag) => {
+        const on = activeTags.includes(tag);
+        return (
+          <button
+            key={tag}
+            type="button"
+            onClick={() =>
+              setActiveTags((prev) =>
+                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+              )
+            }
+            className={`shrink-0 rounded-full px-3 py-1.5 text-base ${
+              on ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 sm:hover:bg-zinc-200"
+            }`}
+          >
+            #{tag}
+          </button>
+        );
+      })}
+      {activeTags.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setActiveTags([])}
+          className="shrink-0 px-2 py-1.5 text-base text-zinc-500 underline"
+        >
+          초기화
+        </button>
+      )}
+    </>
+  );
+
+  const sortSelect = (
+    <>
+              <button
+                type="button"
+                onClick={toggleSort}
+                className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200 sm:hover:bg-zinc-200"
+              >
+                {sort === "name" ? "가나다순" : "최신순"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelecting((v) => !v);
+                  setPicked([]);
+                  setMenuId(null);
+                }}
+                className={`shrink-0 rounded-lg px-3 py-2 text-base ${
+                  selecting ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
+                }`}
+              >
+                {selecting ? "취소" : "선택"}
+              </button>
+    </>
+  );
+
   const title = searching
     ? "전체 검색"
     : inNoFolder
@@ -237,7 +297,7 @@ export default function DocList({
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-8">
-      <header className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-5 pb-3 pt-3">
+      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-cream/95 px-5 pb-3 pt-3 backdrop-blur">
         <div className="mb-2 flex items-center gap-2">
           {(openFolder || searching) && (
             <button
@@ -248,13 +308,16 @@ export default function DocList({
                   : goFolder(currentFolder?.parent_id ?? null)
               }
               aria-label="뒤로"
-              className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100 sm:h-10 sm:w-10 sm:text-2xl sm:hover:bg-zinc-100"
+              className="-ml-3 flex h-14 w-12 shrink-0 items-center justify-center rounded-2xl text-ink active:bg-zinc-100 sm:-ml-2 sm:h-10 sm:w-10 sm:hover:bg-zinc-100"
             >
-              ←
+              <BackIcon className="h-8 w-8 sm:h-6 sm:w-6" />
             </button>
           )}
 
           <div className="min-w-0 flex-1">
+            {atRoot && (
+              <p className="text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY COMPANY</p>
+            )}
             <h1 className="truncate text-xl font-bold">{title}</h1>
             {path.length > 1 && !searching && (
               <p className="truncate text-base text-zinc-400">
@@ -292,35 +355,14 @@ export default function DocList({
           )}
 
           <Link
-            href="/upload"
+            href={uploadHref}
             className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
           >
             업로드
           </Link>
 
-          {!atRoot && (
-            <>
-              <button
-                type="button"
-                onClick={toggleSort}
-                className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200 sm:hover:bg-zinc-200"
-              >
-                {sort === "name" ? "가나다순" : "최신순"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelecting((v) => !v);
-                  setPicked([]);
-                  setMenuId(null);
-                }}
-                className={`shrink-0 rounded-lg px-3 py-2 text-base ${
-                  selecting ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
-                }`}
-              >
-                {selecting ? "취소" : "선택"}
-              </button>
-            </>
+          {!atRoot && scoped.length > 0 && (
+            <div className="hidden shrink-0 items-center gap-2 sm:flex">{sortSelect}</div>
           )}
         </div>
 
@@ -329,40 +371,20 @@ export default function DocList({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="제목·태그·메모 검색 (폴더 상관없이 전체)"
-          className="w-full rounded-xl bg-zinc-100 px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-900 sm:py-2.5"
+          className="w-full rounded-xl border border-zinc-200 bg-paper px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:border-gold focus:ring-2 focus:ring-gold/30 sm:py-2.5"
         />
 
-        {!atRoot && tagsHere.length > 0 && (
-          <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-            {tagsHere.map((tag) => {
-              const on = activeTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() =>
-                    setActiveTags((prev) =>
-                      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-                    )
-                  }
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-base ${
-                    on ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-            {activeTags.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveTags([])}
-                className="shrink-0 px-2 py-1.5 text-base text-zinc-400 underline"
-              >
-                초기화
-              </button>
-            )}
+        {/* 폰: 태그(왼쪽, 옆으로 밀기)와 정렬·선택(오른쪽)을 한 줄에 */}
+        {!atRoot && (tagsHere.length > 0 || scoped.length > 0) && (
+          <div className="mt-3 flex items-center gap-2 sm:hidden">
+            <div className="-ml-5 flex min-w-0 flex-1 gap-2 overflow-x-auto pl-5">{tagChips}</div>
+            {scoped.length > 0 && <div className="flex shrink-0 gap-2">{sortSelect}</div>}
           </div>
+        )}
+
+        {/* PC: 태그는 줄바꿈으로 전부 보이게 */}
+        {!atRoot && tagsHere.length > 0 && (
+          <div className="mt-3 hidden flex-wrap gap-2 sm:flex">{tagChips}</div>
         )}
       </header>
 
@@ -375,6 +397,8 @@ export default function DocList({
           folders={children}
           counts={counts}
           noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
+          canAdd={path.length < MAX_FOLDER_DEPTH}
+          onAdd={() => setNewFolderOpen(true)}
           editMode={editFolders}
           pending={pending}
           onToggleEdit={() => setEditFolders((v) => !v)}
@@ -462,7 +486,7 @@ export default function DocList({
                     rel="noopener noreferrer"
                     className="min-w-0 flex-1 truncate text-lg hover:underline"
                   >
-                    {doc.is_favorite && <span className="text-amber-400">★ </span>}
+                    {doc.is_favorite && <span className="text-gold">★ </span>}
                     {doc.title}
                   </a>
                   <ShareButton doc={doc} onDone={() => router.refresh()} onNotify={setToast} />
@@ -477,12 +501,17 @@ export default function DocList({
         <QuickUpload folderId={openFolder} />
       )}
 
-      {!searching && !inNoFolder && path.length < MAX_FOLDER_DEPTH && !selecting && (
+      {!searching &&
+        !inNoFolder &&
+        !selecting &&
+        path.length < MAX_FOLDER_DEPTH &&
+        children.length === 0 &&
+        (openFolder ? true : (counts.get(NO_FOLDER) ?? 0) === 0) && (
         <div className="px-5 pt-6 sm:hidden">
           <button
             type="button"
             onClick={() => setNewFolderOpen(true)}
-            className="text-base text-zinc-400 underline"
+            className="text-base text-zinc-500 underline"
           >
             + 새 폴더
           </button>
@@ -491,7 +520,7 @@ export default function DocList({
 
       {!selecting && (
         <Link
-          href="/upload"
+          href={uploadHref}
           aria-label="문서 올리기"
           className="fixed bottom-6 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-3xl leading-none text-white shadow-lg active:bg-zinc-700 sm:hidden"
         >
@@ -500,7 +529,7 @@ export default function DocList({
       )}
 
       {selecting && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 mx-auto flex w-full max-w-4xl items-center gap-3 border-t border-zinc-200 bg-white px-5 py-4">
+        <div className="fixed bottom-0 left-0 right-0 z-20 mx-auto flex w-full max-w-4xl items-center gap-3 border-t border-zinc-200 bg-paper px-5 py-4">
           <span className="flex-1 text-lg font-semibold">{picked.length}개 선택</span>
           {picked.length > 0 && (
             <button
@@ -524,7 +553,7 @@ export default function DocList({
       )}
 
       {toast && (
-        <div className="fixed bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-xl bg-zinc-900 px-5 py-3 text-lg text-white shadow-lg">
+        <div className="sheet-in fixed bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-6 py-3 text-lg text-white shadow-xl">
           {toast}
         </div>
       )}
@@ -600,6 +629,8 @@ function FolderSection({
   folders,
   counts,
   noFolderCount,
+  canAdd,
+  onAdd,
   editMode,
   pending,
   onToggleEdit,
@@ -610,6 +641,8 @@ function FolderSection({
   folders: Folder[];
   counts: Map<string, number>;
   noFolderCount: number;
+  canAdd: boolean;
+  onAdd: () => void;
   editMode: boolean;
   pending: boolean;
   onToggleEdit: () => void;
@@ -623,25 +656,32 @@ function FolderSection({
     <>
       <div className="flex items-center justify-between px-5 pt-4 sm:hidden">
         <h2 className="text-base font-semibold text-zinc-400">폴더</h2>
-        {folders.length > 0 && (
-          <button type="button" onClick={onToggleEdit} className="text-base text-zinc-400 underline">
-            {editMode ? "완료" : "편집"}
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          {canAdd && !editMode && (
+            <button type="button" onClick={onAdd} className="text-base text-zinc-500 underline">
+              + 새 폴더
+            </button>
+          )}
+          {folders.length > 0 && (
+            <button type="button" onClick={onToggleEdit} className="text-base text-zinc-500 underline">
+              {editMode ? "완료" : "편집"}
+            </button>
+          )}
+        </div>
       </div>
 
       {editMode ? (
         <ul className="mt-2 sm:hidden">
           {folders.map((folder) => (
             <li key={folder.id} className="flex items-center gap-3 px-5 py-3.5">
-              <span className="text-3xl leading-none">📁</span>
+              <FolderIcon className="h-8 w-9 shrink-0" />
               <input
                 defaultValue={folder.name}
                 onBlur={(e) => {
                   const v = e.target.value.trim();
                   if (v && v !== folder.name) onRename(folder.id, v);
                 }}
-                className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-lg outline-none focus:border-zinc-900"
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-lg outline-none focus:border-gold"
               />
               <button
                 type="button"
@@ -661,9 +701,9 @@ function FolderSection({
               key={folder.id}
               type="button"
               onClick={() => onOpen(folder.id)}
-              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-100"
+              className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-200 bg-paper px-1 py-4 shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:py-3 sm:hover:bg-zinc-50"
             >
-              <span className="text-4xl leading-none">📁</span>
+              <FolderIcon className="h-10 w-11" />
               <span className="text-center text-base font-semibold leading-tight">
                 {folderNameLines(folder.name).map((line) => (
                   <span key={line} className="block">
@@ -681,9 +721,9 @@ function FolderSection({
             <button
               type="button"
               onClick={() => onOpen(NO_FOLDER)}
-              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-100"
+              className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-200 bg-paper px-1 py-4 shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:py-3 sm:hover:bg-zinc-50"
             >
-              <span className="text-4xl leading-none">📁</span>
+              <FolderIcon className="h-10 w-11" />
               <span className="text-center text-base font-semibold leading-tight text-zinc-500">
                 분류 안 함
               </span>
@@ -767,7 +807,7 @@ function DocRows({
             onClick={() => onOpenFolder(folder.id)}
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <span className="shrink-0 text-2xl leading-none">📁</span>
+            <FolderIcon className="h-6 w-7 shrink-0" />
             <span className="truncate text-lg">{folder.name}</span>
             {(folderCounts.get(folder.id) ?? 0) > 0 && (
               <span className="shrink-0 text-base text-zinc-400">
@@ -797,7 +837,7 @@ function DocRows({
                 className="fixed inset-0 z-10 cursor-default"
                 onClick={() => setFolderMenu(null)}
               />
-              <div className="absolute right-24 top-8 z-20 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+              <div className="absolute right-24 top-8 z-20 w-40 overflow-hidden fade-in rounded-xl border border-zinc-200 bg-paper shadow-xl">
                 <MenuItem
                   label="이름 변경"
                   onClick={() => {
@@ -826,7 +866,7 @@ function DocRows({
             onClick={onOpenNoFolder}
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <span className="shrink-0 text-2xl leading-none">📁</span>
+            <FolderIcon className="h-6 w-7 shrink-0" />
             <span className="truncate text-lg text-zinc-500">분류 안 함</span>
             <span className="shrink-0 text-base text-zinc-400">{noFolderCount}</span>
           </button>
@@ -844,7 +884,7 @@ function DocRows({
           <li
             key={doc.id}
             onClick={selecting ? () => onPick(doc.id) : undefined}
-            className={`group relative flex items-center gap-3 px-5 py-4 sm:py-1.5 sm:hover:bg-zinc-100 ${
+            className={`group relative flex items-center gap-2.5 px-5 py-4 sm:gap-3 sm:py-1.5 sm:hover:bg-zinc-100 ${
               selecting ? "cursor-pointer" : ""
             } ${on ? "bg-zinc-100" : ""}`}
           >
@@ -861,16 +901,16 @@ function DocRows({
             <FileIcon fileType={doc.file_type} className="h-10 w-8 shrink-0 sm:h-7 sm:w-[22px]" />
 
             <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1 font-semibold text-zinc-900 sm:text-lg sm:font-normal">
-                {doc.is_favorite && <span className="text-amber-400">★</span>}
+              <p className="flex items-start gap-1 font-semibold leading-snug text-zinc-900 sm:items-center sm:text-lg sm:font-normal">
+                {doc.is_favorite && <span className="text-gold">★</span>}
                 {selecting ? (
-                  <span className="truncate">{doc.title}</span>
+                  <span className="line-clamp-2 sm:line-clamp-1">{doc.title}</span>
                 ) : (
                   <a
                     href={`/s/${doc.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="truncate hover:underline"
+                    className="line-clamp-2 hover:underline sm:line-clamp-1"
                   >
                     {doc.title}
                   </a>
@@ -884,17 +924,16 @@ function DocRows({
               )}
 
               <p className="mt-0.5 truncate text-base text-zinc-400 sm:hidden">
-                {showFolderName && <span>📁 {folderName ?? "분류 안 함"} · </span>}
+                {showFolderName && <span>{folderName ?? "분류 안 함"} · </span>}
                 {doc.last_sent_at
-                  ? `${formatDate(doc.last_sent_at)} 보냄`
-                  : `${formatDate(doc.created_at)} 올림`}
-                {doc.file_size ? ` · ${formatSize(doc.file_size)}` : ""}
+                  ? `${formatDateTiny(doc.last_sent_at)} 보냄`
+                  : `${formatDateTiny(doc.created_at)} 올림`}
               </p>
             </div>
 
             {showFolderName && (
               <span className="hidden max-w-40 shrink-0 truncate text-base text-zinc-400 sm:block">
-                📁 {folderName ?? "분류 안 함"}
+                {folderName ?? "분류 안 함"}
               </span>
             )}
 
@@ -908,7 +947,7 @@ function DocRows({
                   type="button"
                   aria-label="메뉴"
                   onClick={() => onMenu(doc.id)}
-                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 focus-visible:opacity-100 active:bg-zinc-100 sm:hover:bg-zinc-200 sm:[@media(hover:hover)]:opacity-0 sm:[@media(hover:hover)]:group-hover:opacity-100"
+                  className="shrink-0 rounded-lg px-2 py-2 text-2xl font-bold leading-none text-zinc-500 focus-visible:opacity-100 active:bg-zinc-100 sm:hover:bg-zinc-200 sm:[@media(hover:hover)]:opacity-0 sm:[@media(hover:hover)]:group-hover:opacity-100"
                 >
                   ⋯
                 </button>
@@ -927,7 +966,7 @@ function DocRows({
                   className="fixed inset-0 z-10 cursor-default"
                   onClick={() => onMenu(doc.id)}
                 />
-                <div className="absolute right-4 top-14 z-20 w-44 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+                <div className="absolute right-4 top-14 z-20 w-44 overflow-hidden fade-in rounded-xl border border-zinc-200 bg-paper shadow-xl">
                   <MenuItem label="수정" onClick={() => onEdit(doc)} />
                   <MenuItem label="폴더 이동" onClick={() => onMove(doc)} />
                   <MenuItem
@@ -989,11 +1028,11 @@ function Sheet({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fade-in fixed inset-0 z-30 flex items-end justify-center bg-ink/40 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="w-full rounded-t-2xl bg-white p-5 pb-8 sm:max-w-md sm:rounded-2xl sm:pb-5"
+        className="sheet-in w-full rounded-t-3xl bg-paper p-5 pb-8 shadow-2xl sm:max-w-md sm:rounded-2xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-xl font-bold">{title}</h2>
@@ -1023,7 +1062,7 @@ function NewFolderSheet({
         autoFocus
         onChange={(e) => setName(e.target.value)}
         placeholder="폴더 이름"
-        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
+        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
       />
       <div className="flex gap-2">
         <button
@@ -1065,7 +1104,7 @@ function RenameFolderSheet({
         value={name}
         autoFocus
         onChange={(e) => setName(e.target.value)}
-        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
+        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
       />
       <div className="flex gap-2">
         <button
@@ -1113,7 +1152,7 @@ function MoveSheet({
                 doc.folder_id === folder.id ? "font-bold" : ""
               }`}
             >
-              <span>📁</span>
+              <FolderIcon className="h-6 w-7 shrink-0" />
               <span className="flex-1 truncate">{folder.name}</span>
               {doc.folder_id === folder.id && <span className="text-base text-zinc-400">현재</span>}
             </button>
@@ -1125,7 +1164,7 @@ function MoveSheet({
             onClick={() => onPick(null)}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg text-zinc-500 active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50"
           >
-            <span>📁</span>
+            <FolderIcon className="h-6 w-7 shrink-0" />
             <span className="flex-1">분류 안 함</span>
           </button>
         </li>
@@ -1155,7 +1194,7 @@ function EditSheet({
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
+        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
       />
 
       <label className="mb-1 block text-base text-zinc-500">태그 (쉼표로 구분)</label>
@@ -1163,7 +1202,7 @@ function EditSheet({
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         placeholder="그라인드, 백화점, 2026"
-        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
+        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
       />
 
       <label className="mb-1 block text-base text-zinc-500">메모</label>
@@ -1171,7 +1210,7 @@ function EditSheet({
         value={memo}
         onChange={(e) => setMemo(e.target.value)}
         rows={2}
-        className="mb-5 w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
+        className="mb-5 w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold"
       />
 
       <div className="flex gap-2">

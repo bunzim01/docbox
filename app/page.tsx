@@ -18,8 +18,8 @@ export default async function HomePage() {
         <Suspense>
           <DocList documents={documents} folders={folders} />
         </Suspense>
-        <form action={logout} className="px-5 pb-8 pt-2">
-          <button type="submit" className="text-lg text-zinc-400 underline">
+        <form action={logout} className="mx-auto w-full max-w-4xl px-5 pb-8 pt-2">
+          <button type="submit" className="text-base text-zinc-400 underline">
             나가기
           </button>
         </form>

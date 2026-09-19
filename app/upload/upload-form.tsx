@@ -7,6 +7,7 @@ import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions"
 import type { Folder } from "@/lib/documents";
 import { extFromFileName, flattenFolders, formatSize, parseTags, titleFromFileName } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase-browser";
+import BackIcon from "@/app/back-icon";
 import FileIcon from "@/app/file-icon";
 
 const ACCEPT = ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx";
@@ -21,14 +22,17 @@ type Row = {
 export default function UploadForm({
   suggestedTags,
   folders,
+  fromFolder,
 }: {
   suggestedTags: string[];
   folders: Folder[];
+  fromFolder: string | null;
 }) {
   const router = useRouter();
   const [folderId, setFolderId] = useState<string | null>(
-    folders[0]?.id ?? null,
+    fromFolder ?? flattenFolders(folders)[0]?.folder.id ?? null,
   );
+  const backHref = fromFolder ? `/?f=${fromFolder}` : "/";
   const [rows, setRows] = useState<Row[]>([]);
   const [tags, setTags] = useState("");
   const [memo, setMemo] = useState("");
@@ -113,7 +117,8 @@ export default function UploadForm({
     setBusy(false);
 
     if (failed === 0) {
-      router.push("/");
+      // 올린 폴더로 돌아가서 바로 확인
+      router.push(folderId ? `/?f=${folderId}` : "/");
       router.refresh();
     } else {
       setError(`${failed}개가 실패했습니다. 아래에서 확인해 주세요.`);
@@ -124,11 +129,11 @@ export default function UploadForm({
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 pb-10 pt-5">
       <header className="mb-4 flex items-center gap-3">
         <Link
-          href="/"
+          href={backHref}
           aria-label="자료실로"
-          className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100 sm:h-10 sm:w-10 sm:text-2xl sm:hover:bg-zinc-100"
+          className="-ml-3 flex h-14 w-12 shrink-0 items-center justify-center rounded-2xl text-ink active:bg-zinc-100 sm:-ml-2 sm:h-10 sm:w-10 sm:hover:bg-zinc-100"
         >
-          ←
+          <BackIcon className="h-8 w-8 sm:h-6 sm:w-6" />
         </Link>
         <h1 className="text-xl font-bold">문서 올리기</h1>
       </header>
@@ -141,10 +146,10 @@ export default function UploadForm({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={`mb-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed py-8 active:bg-zinc-50 sm:py-6 sm:hover:border-zinc-400 sm:hover:bg-zinc-50 ${
-          dragging ? "border-zinc-900 bg-zinc-100" : "border-zinc-300"
+          dragging ? "border-gold bg-gold-soft" : "border-zinc-300 bg-paper"
         }`}
       >
-        <span className="text-3xl leading-none text-zinc-300">+</span>
+        <span className="text-3xl leading-none text-gold">+</span>
         <span className="mt-2 text-lg font-semibold text-zinc-700">
           {dragging ? "여기에 놓으세요" : "파일 선택"}
         </span>
@@ -167,7 +172,7 @@ export default function UploadForm({
       {rows.length > 0 && (
         <ul className="mb-5 space-y-3">
           {rows.map((row, i) => (
-            <li key={`${row.file.name}-${i}`} className="rounded-xl border border-zinc-200 p-3">
+            <li key={`${row.file.name}-${i}`} className="rounded-xl border border-zinc-200 bg-paper p-3">
               <div className="mb-2 flex items-center gap-2">
                 <FileIcon
                   fileType={extFromFileName(row.file.name)}
@@ -204,7 +209,7 @@ export default function UploadForm({
                 onChange={(e) => patch(i, { title: e.target.value })}
                 placeholder="제목"
                 disabled={busy}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50 sm:py-2"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
               />
 
               {row.error && <p className="mt-2 break-words text-base text-red-600">{row.error}</p>}
@@ -223,7 +228,7 @@ export default function UploadForm({
             value={folderId ?? ""}
             disabled={busy}
             onChange={(e) => setFolderId(e.target.value || null)}
-            className="mb-5 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50 sm:py-2.5"
+            className="mb-5 w-full rounded-xl border border-zinc-300 bg-paper px-4 py-3.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2.5"
           >
             {flattenFolders(folders).map(({ folder, depth }) => (
               <option key={folder.id} value={folder.id}>
@@ -245,7 +250,7 @@ export default function UploadForm({
         onChange={(e) => setTags(e.target.value)}
         placeholder="그라인드, 백화점, 2026"
         disabled={busy}
-        className="w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50"
+        className="w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50"
       />
 
       {suggestedTags.length > 0 && (
@@ -271,7 +276,7 @@ export default function UploadForm({
         rows={2}
         placeholder="나중에 검색할 때 도움이 될 한 줄"
         disabled={busy}
-        className="w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50"
+        className="w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50"
       />
 
       {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-base text-red-600">{error}</p>}

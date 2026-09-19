@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#ffffff",
+  themeColor: "#faf6ee",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -19,7 +19,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="ko" className="h-full">
-      <body className="flex min-h-full flex-col bg-white text-zinc-900 antialiased">
+      <head>
+        {/* office.likeway.co.kr 과 같은 글꼴 */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+        />
+      </head>
+      <body className="flex min-h-full flex-col bg-cream text-ink antialiased">
         {children}
         {kakaoKey && (
           <Script

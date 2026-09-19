@@ -43,7 +43,8 @@ export default async function SharePage({ params }: Params) {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
-      <header className="flex items-start gap-3 px-5 pb-4 pt-6">
+      <p className="px-5 pt-6 text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY COMPANY</p>
+      <header className="flex items-start gap-3 px-5 pb-4 pt-2">
         <FileIcon fileType={doc.file_type} className="mt-0.5 h-12 w-10 shrink-0" />
         <div className="min-w-0">
           <h1 className="text-xl font-bold leading-snug">{doc.title}</h1>
@@ -60,7 +61,7 @@ export default async function SharePage({ params }: Params) {
           <iframe
             src={viewUrl}
             title={doc.title}
-            className="mx-5 hidden h-[70vh] rounded-xl border border-zinc-200 sm:block"
+            className="mx-5 hidden h-[70vh] rounded-xl border border-zinc-200 bg-paper shadow-sm sm:block"
           />
           <div className="px-5 sm:mt-4">
             <a
@@ -73,7 +74,7 @@ export default async function SharePage({ params }: Params) {
             </a>
             <a
               href={downloadUrl}
-              className="mt-3 block rounded-xl border border-zinc-300 py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
+              className="mt-3 block rounded-xl border border-zinc-300 bg-paper py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
             >
               다운로드
             </a>
@@ -93,7 +94,7 @@ export default async function SharePage({ params }: Params) {
               href={officeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 block rounded-xl border border-zinc-300 py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
+              className="mt-3 block rounded-xl border border-zinc-300 bg-paper py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
             >
               브라우저에서 미리보기
             </a>

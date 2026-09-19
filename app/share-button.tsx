@@ -120,11 +120,11 @@ export function KakaoSheet({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fade-in fixed inset-0 z-40 flex items-end justify-center bg-ink/40 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="w-full rounded-t-2xl bg-white p-5 pb-8 sm:max-w-md sm:rounded-2xl sm:pb-5"
+        className="sheet-in w-full rounded-t-3xl bg-paper p-5 pb-8 shadow-2xl sm:max-w-md sm:rounded-2xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-1 text-xl font-bold">
