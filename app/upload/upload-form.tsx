@@ -9,7 +9,7 @@ import { extFromFileName, flattenFolders, formatSize, parseTags, titleFromFileNa
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import FileIcon from "@/app/file-icon";
 
-const ACCEPT = ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx";
+const ACCEPT = ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx";
 
 type Row = {
   file: File;
@@ -149,7 +149,7 @@ export default function UploadForm({
           {dragging ? "여기에 놓으세요" : "파일 선택"}
         </span>
         <span className="mt-1 text-base text-zinc-400">
-          PDF · PPT · DOC · XLS
+          PDF · PPT · DOC · XLS · HWP
           <span className="hidden sm:inline"> · 끌어다 놓아도 됩니다</span>
         </span>
         <input

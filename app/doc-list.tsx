@@ -203,6 +203,10 @@ export default function DocList({
           return;
         }
         if (result.status === "cancelled") return;
+        if (result.status === "tap-again") {
+          setToast("준비됐습니다. 한 번 더 눌러 보내세요");
+          return;
+        }
         if (result.status === "error") {
           setError(result.message);
           return;
@@ -446,17 +450,24 @@ export default function DocList({
               최근 문서
             </h2>
             <ul className="divide-y divide-zinc-100">
-              {recent.map((doc) => {
-                return (
-                  <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                    <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
-                    <span className="truncate text-base">
-                      {doc.is_favorite && <span className="text-amber-400">★ </span>}
-                      {doc.title}
-                    </span>
-                  </li>
-                );
-              })}
+              {recent.map((doc) => (
+                <li
+                  key={doc.id}
+                  className="flex items-center gap-3 px-5 py-3 sm:py-1.5 sm:hover:bg-zinc-100"
+                >
+                  <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
+                  <a
+                    href={`/s/${doc.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 truncate text-lg hover:underline"
+                  >
+                    {doc.is_favorite && <span className="text-amber-400">★ </span>}
+                    {doc.title}
+                  </a>
+                  <ShareButton doc={doc} onDone={() => router.refresh()} onNotify={setToast} />
+                </li>
+              ))}
             </ul>
           </>
         )
@@ -769,7 +780,7 @@ function DocRows({
             type="button"
             aria-label="폴더 메뉴"
             onClick={() => setFolderMenu(folderMenu === folder.id ? null : folder.id)}
-            className="shrink-0 rounded-lg px-2 py-1 text-xl leading-none text-zinc-400 opacity-0 hover:bg-zinc-200 group-hover:opacity-100"
+            className="shrink-0 rounded-lg px-2 py-1 text-xl leading-none text-zinc-400 hover:bg-zinc-200 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
           >
             ⋯
           </button>
@@ -852,7 +863,18 @@ function DocRows({
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 font-semibold text-zinc-900 sm:text-lg sm:font-normal">
                 {doc.is_favorite && <span className="text-amber-400">★</span>}
-                <span className="truncate">{doc.title}</span>
+                {selecting ? (
+                  <span className="truncate">{doc.title}</span>
+                ) : (
+                  <a
+                    href={`/s/${doc.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate hover:underline"
+                  >
+                    {doc.title}
+                  </a>
+                )}
               </p>
 
               {doc.tags?.length > 0 && (
@@ -878,7 +900,7 @@ function DocRows({
 
             {!selecting && (
               <>
-                <div className="shrink-0 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                <div className="shrink-0 transition-opacity focus-within:opacity-100 sm:[@media(hover:hover)]:opacity-0 sm:[@media(hover:hover)]:group-hover:opacity-100">
                   <ShareButton doc={doc} onDone={onShared} onNotify={onNotify} />
                 </div>
 
@@ -886,7 +908,7 @@ function DocRows({
                   type="button"
                   aria-label="메뉴"
                   onClick={() => onMenu(doc.id)}
-                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100 sm:opacity-0 sm:hover:bg-zinc-200 sm:group-hover:opacity-100"
+                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 focus-visible:opacity-100 active:bg-zinc-100 sm:hover:bg-zinc-200 sm:[@media(hover:hover)]:opacity-0 sm:[@media(hover:hover)]:group-hover:opacity-100"
                 >
                   ⋯
                 </button>

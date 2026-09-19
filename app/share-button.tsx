@@ -27,6 +27,7 @@ export default function ShareButton({
 }) {
   const [mode, setMode] = useState<"unknown" | "file" | "link">("unknown");
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false); // 파일 준비 끝 — 한 번 더 누르면 바로 전송
 
   useEffect(() => {
     setMode(canShareFiles() ? "file" : "link");
@@ -38,11 +39,17 @@ export default function ShareButton({
       if (mode === "file") {
         const result = await shareFiles([doc]);
         if (result.status === "shared") {
+          setReady(false);
           await markSent(doc.id);
           onDone();
           return;
         }
         if (result.status === "cancelled") return;
+        if (result.status === "tap-again") {
+          setReady(true);
+          onNotify("준비됐습니다. 한 번 더 눌러 보내세요");
+          return;
+        }
         if (result.status === "error") {
           onNotify(result.message);
           return;
@@ -67,10 +74,12 @@ export default function ShareButton({
       disabled={busy || mode === "unknown"}
       onClick={go}
       aria-label="카카오톡으로 보내기"
-      className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FEE500] px-4 py-3 text-lg font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:px-3 sm:py-1.5 sm:hover:brightness-95"
+      className={`flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FEE500] px-4 py-3 text-lg font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:px-3 sm:py-1.5 sm:hover:brightness-95 ${
+        ready ? "ring-2 ring-[#191600]" : ""
+      }`}
     >
       <KakaoIcon className="h-6 w-6 sm:h-5 sm:w-5" />
-      {busy ? "준비 중…" : "카톡"}
+      {busy ? "준비 중…" : ready ? "보내기" : "카톡"}
     </button>
   );
 }
