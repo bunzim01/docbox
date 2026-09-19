@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { downloadFileName, fileUrl, getDocument } from "@/lib/documents";
 import { formatSize } from "@/lib/format";
+import FileIcon from "@/app/file-icon";
 
 export const dynamic = "force-dynamic";
 
@@ -42,12 +43,15 @@ export default async function SharePage({ params }: Params) {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
-      <header className="px-5 pb-4 pt-6">
-        <h1 className="text-xl font-bold leading-snug">{doc.title}</h1>
-        <p className="mt-1 text-base text-zinc-500">
-          {(doc.file_type ?? "").toUpperCase()}
-          {doc.file_size ? ` · ${formatSize(doc.file_size)}` : ""}
-        </p>
+      <header className="flex items-start gap-3 px-5 pb-4 pt-6">
+        <FileIcon fileType={doc.file_type} className="mt-0.5 h-12 w-10 shrink-0" />
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold leading-snug">{doc.title}</h1>
+          <p className="mt-1 text-base text-zinc-500">
+            {(doc.file_type ?? "").toUpperCase()}
+            {doc.file_size ? ` · ${formatSize(doc.file_size)}` : ""}
+          </p>
+        </div>
       </header>
 
       {isPdf ? (

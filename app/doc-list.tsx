@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { MAX_FOLDER_DEPTH, type DocView, type Folder } from "@/lib/documents";
 import {
   childFolders,
-  fileBadge,
   folderAndDescendants,
   folderNameLines,
   folderPath,
@@ -16,6 +15,7 @@ import {
   parseTags,
 } from "@/lib/format";
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import FileIcon from "./file-icon";
 import KakaoIcon from "./kakao-icon";
 import ShareButton, { KakaoSheet } from "./share-button";
 import {
@@ -425,14 +425,9 @@ export default function DocList({
             </h2>
             <ul className="divide-y divide-zinc-100">
               {recent.map((doc) => {
-                const badge = fileBadge(doc.file_type);
                 return (
                   <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${badge.className}`}
-                    >
-                      {badge.label}
-                    </span>
+                    <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
                     <span className="truncate text-base">
                       {doc.is_favorite && <span className="text-amber-400">★ </span>}
                       {doc.title}
@@ -840,7 +835,6 @@ function DocRows({
       ))}
 
       {docs.map((doc) => {
-        const badge = fileBadge(doc.file_type);
         const folderName = folders.find((f) => f.id === doc.folder_id)?.name;
         const on = picked.includes(doc.id);
 
@@ -862,11 +856,7 @@ function DocRows({
               </span>
             )}
 
-            <span
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold sm:h-9 sm:w-9 ${badge.className}`}
-            >
-              {badge.label}
-            </span>
+            <FileIcon fileType={doc.file_type} className="h-10 w-8 shrink-0 sm:h-7 sm:w-[22px]" />
 
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 font-semibold text-zinc-900 sm:text-lg sm:font-normal">

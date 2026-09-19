@@ -7,6 +7,7 @@ import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions"
 import type { Folder } from "@/lib/documents";
 import { extFromFileName, folderPath, formatSize, parseTags, titleFromFileName } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase-browser";
+import FileIcon from "@/app/file-icon";
 
 const ACCEPT = ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx";
 
@@ -167,8 +168,12 @@ export default function UploadForm({
         <ul className="mb-5 space-y-3">
           {rows.map((row, i) => (
             <li key={`${row.file.name}-${i}`} className="rounded-xl border border-zinc-200 p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="truncate text-base text-zinc-400">
+              <div className="mb-2 flex items-center gap-2">
+                <FileIcon
+                  fileType={extFromFileName(row.file.name)}
+                  className="h-7 w-[22px] shrink-0"
+                />
+                <span className="min-w-0 flex-1 truncate text-base text-zinc-400">
                   {row.file.name} · {formatSize(row.file.size)}
                 </span>
                 {row.state === "대기" ? (
