@@ -12,6 +12,7 @@ import {
   folderPath,
   formatDateShort,
   formatDateTiny,
+  formatSize,
   parseTags,
 } from "@/lib/format";
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
@@ -183,7 +184,7 @@ export default function DocList({
     return [...shown].sort(
       (a, b) =>
         Number(b.is_favorite) - Number(a.is_favorite) ||
-        a.title.localeCompare(b.title, "ko"),
+        a.title.localeCompare(b.title, "ko", { numeric: true }),
     );
   }, [shown, sort]);
 
@@ -571,7 +572,7 @@ export default function DocList({
             goFolder(null);
             window.scrollTo({ top: 0 });
           }}
-          className="fixed bottom-6 left-5 z-20 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-200 bg-paper text-ink shadow-lg active:bg-zinc-100 sm:left-[max(1.25rem,calc(50%-28rem+1.25rem))] sm:h-12 sm:w-12 sm:hover:bg-zinc-100"
+          className="fixed bottom-6 left-5 z-20 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-200 bg-paper text-ink shadow-lg active:bg-zinc-100 sm:left-[max(1.25rem,calc(50%-28rem-4.5rem))] sm:h-12 sm:w-12 sm:hover:bg-zinc-100"
         >
           <HomeIcon className="h-7 w-7 sm:h-6 sm:w-6" />
         </button>
@@ -1078,6 +1079,7 @@ function DocRows({
                 {doc.last_sent_at
                   ? `${formatDateTiny(doc.last_sent_at)} 보냄`
                   : `${formatDateTiny(doc.created_at)} 올림`}
+                {doc.file_size ? ` · ${formatSize(doc.file_size)}` : ""}
               </p>
             </div>
 
@@ -1102,6 +1104,9 @@ function DocRows({
                   ⋯
                 </button>
 
+                <span className="hidden w-20 shrink-0 text-right text-base text-zinc-400 md:block">
+                  {formatSize(doc.file_size)}
+                </span>
                 <span className="hidden w-32 shrink-0 text-right text-base text-zinc-400 md:block">
                   {formatDateShort(doc.last_sent_at ?? doc.created_at)}
                 </span>

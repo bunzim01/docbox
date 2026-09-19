@@ -74,12 +74,17 @@ export default function ShareButton({
       disabled={busy || mode === "unknown"}
       onClick={go}
       aria-label="카카오톡으로 보내기"
-      className={`flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FEE500] px-4 py-3 text-lg font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:px-3 sm:py-1.5 sm:hover:brightness-95 ${
-        ready ? "ring-2 ring-[#191600]" : ""
+      className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#FEE500] font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:h-9 sm:hover:brightness-95 ${
+        ready ? "px-4 ring-2 ring-[#191600]" : "w-11 sm:w-auto sm:px-3"
       }`}
     >
-      <KakaoIcon className="h-6 w-6 sm:h-5 sm:w-5" />
-      {busy ? "준비 중…" : ready ? "보내기" : "카톡"}
+      <KakaoIcon className={`h-6 w-6 sm:h-5 sm:w-5 ${busy ? "animate-pulse" : ""}`} />
+      {/* 폰: 아이콘만. 한 번 더 눌러야 할 때만 글자를 보여준다. PC: 글자도 함께 */}
+      {ready ? (
+        <span className="text-lg">보내기</span>
+      ) : (
+        <span className="hidden text-base sm:inline">{busy ? "준비 중…" : "카톡"}</span>
+      )}
     </button>
   );
 }

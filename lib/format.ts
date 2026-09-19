@@ -73,7 +73,7 @@ export function childFolders<T extends { id: string; name: string; parent_id: st
 ): T[] {
   return folders
     .filter((f) => (f.parent_id ?? null) === parentId)
-    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    .sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
 }
 
 /** 맨 위부터 그 폴더까지의 경로 (예: 제품소개서 › A브랜드) */
@@ -119,7 +119,7 @@ export function flattenFolders<
 >(folders: T[], parentId: string | null = null, depth = 0): { folder: T; depth: number }[] {
   const here = folders
     .filter((f) => (f.parent_id ?? null) === parentId)
-    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    .sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
 
   const out: { folder: T; depth: number }[] = [];
   for (const folder of here) {
