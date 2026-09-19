@@ -182,3 +182,27 @@ export async function moveDocument(id: string, folderId: string | null): Promise
   revalidatePath("/");
   return { ok: true };
 }
+
+/** 공유에 성공했을 때 보낸 횟수·시각 기록 */
+export async function markSent(id: string): Promise<Result> {
+  await requireAuth();
+
+  const sb = supabase();
+  const { data: doc, error: findError } = await sb
+    .from("documents")
+    .select("sent_count")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (findError) return { ok: false, error: findError.message };
+  if (!doc) return { ok: false, error: "문서를 찾을 수 없습니다." };
+
+  const { error } = await sb
+    .from("documents")
+    .update({ sent_count: (doc.sent_count ?? 0) + 1, last_sent_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  return { ok: true };
+}

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import type { Doc, Folder } from "@/lib/documents";
+import type { Doc, DocView, Folder } from "@/lib/documents";
 import { fileBadge, folderNameLines, formatDate, formatSize, parseTags } from "@/lib/format";
+import ShareButton from "./share-button";
 import {
   createFolder,
   deleteDocument,
@@ -24,7 +25,7 @@ export default function DocList({
   documents,
   folders,
 }: {
-  documents: Doc[];
+  documents: DocView[];
   folders: Folder[];
 }) {
   const router = useRouter();
@@ -34,8 +35,8 @@ export default function DocList({
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [menuId, setMenuId] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Doc | null>(null);
-  const [moving, setMoving] = useState<Doc | null>(null);
+  const [editing, setEditing] = useState<DocView | null>(null);
+  const [moving, setMoving] = useState<DocView | null>(null);
   const [editFolders, setEditFolders] = useState(false);
   const [sort, setSort] = useState<"recent" | "name">("recent");
   const [error, setError] = useState("");
@@ -295,6 +296,7 @@ export default function DocList({
               run(() => deleteDocument(doc.id));
             }
           }}
+          onShared={() => router.refresh()}
         />
       )}
 
@@ -355,7 +357,7 @@ function FolderHome({
 }: {
   folders: Folder[];
   counts: Map<string, number>;
-  recent: Doc[];
+  recent: DocView[];
   editMode: boolean;
   pending: boolean;
   onToggleEdit: () => void;
@@ -505,17 +507,19 @@ function DocRows({
   onMove,
   onFavorite,
   onDelete,
+  onShared,
 }: {
-  docs: Doc[];
+  docs: DocView[];
   folders: Folder[];
   empty: string;
   menuId: string | null;
   showFolderName: boolean;
   onMenu: (id: string) => void;
-  onEdit: (doc: Doc) => void;
-  onMove: (doc: Doc) => void;
-  onFavorite: (doc: Doc) => void;
-  onDelete: (doc: Doc) => void;
+  onEdit: (doc: DocView) => void;
+  onMove: (doc: DocView) => void;
+  onFavorite: (doc: DocView) => void;
+  onDelete: (doc: DocView) => void;
+  onShared: () => void;
 }) {
   if (docs.length === 0) {
     return <p className="whitespace-pre-line px-5 py-16 text-center text-base text-zinc-400">{empty}</p>;
@@ -555,11 +559,13 @@ function DocRows({
               </p>
             </div>
 
+            <ShareButton doc={doc} fileUrl={doc.fileUrl} onDone={onShared} />
+
             <button
               type="button"
               aria-label="메뉴"
               onClick={() => onMenu(doc.id)}
-              className="shrink-0 rounded-lg px-3 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100"
+              className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100"
             >
               ⋯
             </button>

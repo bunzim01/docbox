@@ -6,6 +6,8 @@ export type Folder = {
   sort_order: number;
 };
 
+export type DocView = Doc & { fileUrl: string };
+
 export type Doc = {
   id: string;
   title: string;
@@ -54,4 +56,26 @@ export async function getDocument(id: string): Promise<Doc | null> {
 
   if (error) throw new Error(error.message);
   return (data as Doc) ?? null;
+}
+
+/**
+ * 받는 사람이 열 수 있는 파일 주소.
+ * downloadName 을 주면 그 이름으로 저장된다 (uuid 대신 제목으로).
+ */
+export function fileUrl(filePath: string, downloadName?: string): string {
+  const { data } = supabase()
+    .storage.from("docs")
+    .getPublicUrl(filePath, downloadName ? { download: downloadName } : undefined);
+  return data.publicUrl;
+}
+
+/** "그라인드 제안서" + "pdf" → "그라인드 제안서.pdf" */
+export function downloadFileName(title: string, fileType: string | null): string {
+  const clean = title.replace(/[\\/:*?"<>|]/g, "").trim() || "문서";
+  return fileType ? `${clean}.${fileType}` : clean;
+}
+
+/** 화면에 내려보낼 때 파일 주소를 같이 붙인다 */
+export function withFileUrl(doc: Doc): DocView {
+  return { ...doc, fileUrl: fileUrl(doc.file_path) };
 }

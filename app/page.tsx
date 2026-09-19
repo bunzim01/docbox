@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { requireAuth } from "@/lib/auth-server";
-import { listDocuments, listFolders } from "@/lib/documents";
+import { listDocuments, listFolders, withFileUrl } from "@/lib/documents";
 import DocList from "./doc-list";
 import { logout } from "./login/actions";
 
@@ -11,7 +11,8 @@ export default async function HomePage() {
   await requireAuth();
 
   try {
-    const [documents, folders] = await Promise.all([listDocuments(), listFolders()]);
+    const [docs, folders] = await Promise.all([listDocuments(), listFolders()]);
+    const documents = docs.map(withFileUrl);
     return (
       <>
         <Suspense>
