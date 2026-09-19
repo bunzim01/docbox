@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { DocView } from "@/lib/documents";
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
 import { markSent } from "./actions";
+import KakaoIcon from "./kakao-icon";
 
 declare global {
   interface Window {
@@ -65,9 +66,11 @@ export default function ShareButton({
       type="button"
       disabled={busy || mode === "unknown"}
       onClick={go}
-      className="shrink-0 rounded-xl bg-zinc-900 px-5 py-3 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:px-4 sm:py-1.5 sm:hover:bg-zinc-700"
+      aria-label="카카오톡으로 보내기"
+      className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FEE500] px-4 py-3 text-lg font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:px-3 sm:py-1.5 sm:hover:brightness-95"
     >
-      {busy ? "준비 중…" : mode === "link" ? "링크 복사" : "공유"}
+      <KakaoIcon className="h-6 w-6 sm:h-5 sm:w-5" />
+      {busy ? "준비 중…" : "카톡"}
     </button>
   );
 }
@@ -124,8 +127,9 @@ export function KakaoSheet({
           <button
             type="button"
             onClick={sendKakao}
-            className="w-full rounded-xl bg-[#FEE500] py-4 text-xl font-semibold text-[#191600] active:brightness-95"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-4 text-xl font-bold text-[#191600] active:brightness-95 sm:py-3 sm:hover:brightness-95"
           >
+            <KakaoIcon className="h-6 w-6" />
             카카오톡으로 보내기
           </button>
         ) : (

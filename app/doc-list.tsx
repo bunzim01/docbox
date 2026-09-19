@@ -15,6 +15,7 @@ import {
   parseTags,
 } from "@/lib/format";
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import KakaoIcon from "./kakao-icon";
 import ShareButton, { KakaoSheet } from "./share-button";
 import {
   createFolder,
@@ -494,9 +495,10 @@ export default function DocList({
             type="button"
             disabled={picked.length === 0 || busy}
             onClick={sharePicked}
-            className="rounded-xl bg-zinc-900 px-6 py-3.5 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-xl bg-[#FEE500] px-5 py-3.5 text-lg font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:py-2.5 sm:hover:brightness-95"
           >
-            {busy ? "준비 중…" : "한 번에 보내기"}
+            <KakaoIcon className="h-6 w-6" />
+            {busy ? "준비 중…" : `카톡으로 ${picked.length}개 보내기`}
           </button>
         </div>
       )}
