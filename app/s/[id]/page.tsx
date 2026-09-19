@@ -41,7 +41,7 @@ export default async function SharePage({ params }: Params) {
     : null;
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
       <header className="px-5 pb-4 pt-6">
         <h1 className="text-xl font-bold leading-snug">{doc.title}</h1>
         <p className="mt-1 text-base text-zinc-500">
@@ -63,13 +63,13 @@ export default async function SharePage({ params }: Params) {
               href={viewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-xl bg-zinc-900 py-4 text-center text-xl font-semibold text-white active:bg-zinc-700"
+              className="block rounded-xl bg-zinc-900 py-4 text-center text-xl font-semibold text-white active:bg-zinc-700 sm:py-3 sm:hover:bg-zinc-700"
             >
               문서 보기
             </a>
             <a
               href={downloadUrl}
-              className="mt-3 block rounded-xl border border-zinc-300 py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100"
+              className="mt-3 block rounded-xl border border-zinc-300 py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
             >
               다운로드
             </a>
@@ -79,7 +79,7 @@ export default async function SharePage({ params }: Params) {
         <div className="px-5">
           <a
             href={downloadUrl}
-            className="block rounded-xl bg-zinc-900 py-5 text-center text-xl font-semibold text-white active:bg-zinc-700"
+            className="block rounded-xl bg-zinc-900 py-5 text-center text-xl font-semibold text-white active:bg-zinc-700 sm:py-3 sm:hover:bg-zinc-700"
           >
             다운로드
           </a>
@@ -89,7 +89,7 @@ export default async function SharePage({ params }: Params) {
               href={officeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 block rounded-xl border border-zinc-300 py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100"
+              className="mt-3 block rounded-xl border border-zinc-300 py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
             >
               브라우저에서 미리보기
             </a>

@@ -33,6 +33,7 @@ export default function UploadForm({
   const [memo, setMemo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false);
 
   function pickFiles(fileList: FileList | null) {
     if (!fileList) return;
@@ -43,6 +44,12 @@ export default function UploadForm({
     }));
     setRows((prev) => [...prev, ...picked]);
     setError("");
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    if (!busy) pickFiles(e.dataTransfer.files);
   }
 
   function addTag(tag: string) {
@@ -113,22 +120,37 @@ export default function UploadForm({
   }
 
   return (
-    <main className="flex flex-1 flex-col px-5 pb-10 pt-5">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 pb-10 pt-5">
       <header className="mb-4 flex items-center gap-3">
         <Link
           href="/"
           aria-label="문서함으로"
-          className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100"
+          className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100 sm:h-10 sm:w-10 sm:text-2xl sm:hover:bg-zinc-100"
         >
           ←
         </Link>
         <h1 className="text-xl font-bold">문서 올리기</h1>
       </header>
 
-      <label className="mb-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 py-10 active:bg-zinc-50">
+      <label
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        className={`mb-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed py-10 active:bg-zinc-50 sm:py-8 sm:hover:border-zinc-400 sm:hover:bg-zinc-50 ${
+          dragging ? "border-zinc-900 bg-zinc-100" : "border-zinc-300"
+        }`}
+      >
         <span className="text-3xl text-zinc-300">+</span>
-        <span className="mt-2 text-lg font-semibold text-zinc-700">파일 선택</span>
+        <span className="mt-2 text-lg font-semibold text-zinc-700">
+          {dragging ? "여기에 놓으세요" : "파일 선택"}
+        </span>
         <span className="mt-1 text-base text-zinc-400">PDF · PPT · DOC · XLS · 여러 개 가능</span>
+        <span className="mt-1 hidden text-base text-zinc-400 sm:block">
+          파일을 끌어다 놓아도 됩니다
+        </span>
         <input
           type="file"
           multiple
@@ -177,7 +199,7 @@ export default function UploadForm({
                 onChange={(e) => patch(i, { title: e.target.value })}
                 placeholder="제목"
                 disabled={busy}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-lg outline-none focus:border-zinc-900 disabled:bg-zinc-50 sm:py-2"
               />
 
               {row.error && <p className="mt-2 break-words text-base text-red-600">{row.error}</p>}
@@ -229,14 +251,14 @@ export default function UploadForm({
       />
 
       {suggestedTags.length > 0 && (
-        <div className="-mx-5 mt-2 flex gap-2 overflow-x-auto px-5 pb-1">
+        <div className="-mx-5 mt-2 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {suggestedTags.map((tag) => (
             <button
               key={tag}
               type="button"
               onClick={() => addTag(tag)}
               disabled={busy}
-              className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-base text-zinc-600 active:bg-zinc-200"
+              className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-base text-zinc-600 active:bg-zinc-200 sm:hover:bg-zinc-200"
             >
               + {tag}
             </button>
@@ -262,7 +284,7 @@ export default function UploadForm({
         type="button"
         onClick={uploadAll}
         disabled={busy || rows.length === 0}
-        className="mt-6 w-full rounded-xl bg-zinc-900 py-4 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40"
+        className="mt-6 w-full rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:py-3 sm:hover:bg-zinc-700"
       >
         {busy ? "올리는 중…" : rows.length > 0 ? `${rows.length}개 저장` : "파일을 선택해 주세요"}
       </button>

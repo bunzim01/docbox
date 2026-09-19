@@ -65,7 +65,7 @@ export default function ShareButton({
       type="button"
       disabled={busy || mode === "unknown"}
       onClick={go}
-      className="shrink-0 rounded-xl bg-zinc-900 px-5 py-3 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40"
+      className="shrink-0 rounded-xl bg-zinc-900 px-5 py-3 text-lg font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:px-4 sm:py-1.5 sm:hover:bg-zinc-700"
     >
       {busy ? "준비 중…" : mode === "link" ? "링크 복사" : "공유"}
     </button>
@@ -107,8 +107,14 @@ export function KakaoSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/40" onClick={onClose}>
-      <div className="w-full rounded-t-2xl bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-2xl bg-white p-5 pb-8 sm:max-w-md sm:rounded-2xl sm:pb-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="mb-1 text-xl font-bold">
           링크 {links.length}개가 복사되었습니다
         </h2>
@@ -131,7 +137,7 @@ export function KakaoSheet({
         <button
           type="button"
           onClick={onClose}
-          className="mt-3 w-full rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600"
+          className="mt-3 w-full rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600 sm:py-2.5 sm:hover:bg-zinc-50"
         >
           닫기
         </button>

@@ -232,7 +232,7 @@ export default function DocList({
       : (currentFolder?.name ?? "문서함");
 
   return (
-    <main className="flex flex-1 flex-col pb-28">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-8">
       <header className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-5 pb-3 pt-3">
         <div className="mb-2 flex items-center gap-2">
           {(openFolder || searching) && (
@@ -244,7 +244,7 @@ export default function DocList({
                   : goFolder(currentFolder?.parent_id ?? null)
               }
               aria-label="뒤로"
-              className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100"
+              className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100 sm:h-10 sm:w-10 sm:text-2xl sm:hover:bg-zinc-100"
             >
               ←
             </button>
@@ -277,12 +277,19 @@ export default function DocList({
             {searching ? `${shown.length}개` : `${scoped.length}개`}
           </span>
 
+          <Link
+            href="/upload"
+            className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
+          >
+            업로드
+          </Link>
+
           {!atRoot && (
             <>
               <button
                 type="button"
                 onClick={toggleSort}
-                className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200"
+                className="shrink-0 rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-600 active:bg-zinc-200 sm:hover:bg-zinc-200"
               >
                 {sort === "name" ? "가나다순" : "최신순"}
               </button>
@@ -308,11 +315,11 @@ export default function DocList({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="제목·태그·메모 검색 (폴더 상관없이 전체)"
-          className="w-full rounded-xl bg-zinc-100 px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-900"
+          className="w-full rounded-xl bg-zinc-100 px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-900 sm:py-2.5"
         />
 
         {!searching && siblings.length > 1 && (
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5 md:grid-cols-6">
             {siblings.map((folder) => {
               const on = openFolder === folder.id;
               return (
@@ -336,7 +343,7 @@ export default function DocList({
         )}
 
         {!atRoot && tagsHere.length > 0 && (
-          <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1">
+          <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {tagsHere.map((tag) => {
               const on = activeTags.includes(tag);
               return (
@@ -429,7 +436,7 @@ export default function DocList({
           folders={folders}
           empty={
             documents.length === 0
-              ? "아직 올린 문서가 없습니다.\n오른쪽 아래 + 를 눌러 올려보세요."
+              ? "아직 올린 문서가 없습니다.\n[업로드] 버튼으로 올려보세요."
               : "이 폴더에는 문서가 없습니다."
           }
           menuId={menuId}
@@ -465,14 +472,14 @@ export default function DocList({
         <Link
           href="/upload"
           aria-label="문서 올리기"
-          className="fixed bottom-6 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-3xl leading-none text-white shadow-lg active:bg-zinc-700"
+          className="fixed bottom-6 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-3xl leading-none text-white shadow-lg active:bg-zinc-700 sm:hidden"
         >
           +
         </Link>
       )}
 
       {selecting && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 flex items-center gap-3 border-t border-zinc-200 bg-white px-5 py-4">
+        <div className="fixed bottom-0 left-0 right-0 z-20 mx-auto flex w-full max-w-4xl items-center gap-3 border-t border-zinc-200 bg-white px-5 py-4">
           <span className="flex-1 text-lg font-semibold">{picked.length}개 선택</span>
           {picked.length > 0 && (
             <button
@@ -618,13 +625,13 @@ function FolderSection({
           ))}
         </ul>
       ) : (
-        <div className="mt-2 grid grid-cols-3 gap-2 px-5">
+        <div className="mt-2 grid grid-cols-3 gap-2 px-5 sm:grid-cols-5 md:grid-cols-6">
           {folders.map((folder) => (
             <button
               key={folder.id}
               type="button"
               onClick={() => onOpen(folder.id)}
-              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100"
+              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-100"
             >
               <span className="text-4xl leading-none">📁</span>
               <span className="text-center text-base font-semibold leading-tight">
@@ -642,7 +649,7 @@ function FolderSection({
             <button
               type="button"
               onClick={() => onOpen(NO_FOLDER)}
-              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100"
+              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-100"
             >
               <span className="text-4xl leading-none">📁</span>
               <span className="text-center text-base font-semibold leading-tight text-zinc-500">
@@ -656,7 +663,7 @@ function FolderSection({
             <button
               type="button"
               onClick={onAdd}
-              className="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 px-1 py-4 active:bg-zinc-50"
+              className="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 px-1 py-4 active:bg-zinc-50 sm:py-3 sm:hover:border-zinc-400 sm:hover:bg-zinc-50"
             >
               <span className="text-4xl leading-none text-zinc-300">+</span>
               <span className="text-center text-base font-semibold leading-tight text-zinc-500">
@@ -722,7 +729,7 @@ function DocRows({
           <li
             key={doc.id}
             onClick={selecting ? () => onPick(doc.id) : undefined}
-            className={`relative flex items-center gap-3 px-5 py-4 ${
+            className={`relative flex items-center gap-3 px-5 py-4 sm:py-2.5 sm:hover:bg-zinc-50 ${
               selecting ? "cursor-pointer" : ""
             } ${on ? "bg-zinc-50" : ""}`}
           >
@@ -737,7 +744,7 @@ function DocRows({
             )}
 
             <span
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold ${badge.className}`}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold sm:h-9 sm:w-9 ${badge.className}`}
             >
               {badge.label}
             </span>
@@ -771,7 +778,7 @@ function DocRows({
                   type="button"
                   aria-label="메뉴"
                   onClick={() => onMenu(doc.id)}
-                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100"
+                  className="shrink-0 rounded-lg px-2 py-2 text-xl leading-none text-zinc-400 active:bg-zinc-100 sm:hover:bg-zinc-100"
                 >
                   ⋯
                 </button>
@@ -817,8 +824,8 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className={`block w-full px-4 py-3.5 text-left text-lg active:bg-zinc-50 ${
-        danger ? "border-t border-zinc-100 text-red-600 active:bg-red-50" : ""
+      className={`block w-full px-4 py-3.5 text-left text-lg active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50 ${
+        danger ? "border-t border-zinc-100 text-red-600 active:bg-red-50 sm:hover:bg-red-50" : ""
       }`}
     >
       {label}
@@ -837,9 +844,24 @@ function Sheet({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  // PC 에서 Esc 로 닫기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/40" onClick={onClose}>
-      <div className="w-full rounded-t-2xl bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-2xl bg-white p-5 pb-8 sm:max-w-md sm:rounded-2xl sm:pb-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="mb-4 text-xl font-bold">{title}</h2>
         {children}
       </div>
@@ -867,13 +889,13 @@ function NewFolderSheet({
         autoFocus
         onChange={(e) => setName(e.target.value)}
         placeholder="폴더 이름"
-        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
+        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
       />
       <div className="flex gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600"
+          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600 sm:py-2.5 sm:hover:bg-zinc-50"
         >
           취소
         </button>
@@ -881,7 +903,7 @@ function NewFolderSheet({
           type="button"
           disabled={pending || !name.trim()}
           onClick={() => onCreate(name)}
-          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40"
+          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:py-2.5 sm:hover:bg-zinc-700"
         >
           {pending ? "만드는 중…" : "만들기"}
         </button>
@@ -912,7 +934,7 @@ function MoveSheet({
               <button
                 type="button"
                 onClick={() => onPick(folder.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg active:bg-zinc-50 ${
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50 ${
                   doc.folder_id === folder.id ? "font-bold" : ""
                 }`}
               >
@@ -927,7 +949,7 @@ function MoveSheet({
           <button
             type="button"
             onClick={() => onPick(null)}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg text-zinc-500 active:bg-zinc-50"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg text-zinc-500 active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50"
           >
             <span>📁</span>
             <span className="flex-1">분류 안 함</span>
@@ -959,7 +981,7 @@ function EditSheet({
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
+        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
       />
 
       <label className="mb-1 block text-base text-zinc-500">태그 (쉼표로 구분)</label>
@@ -967,7 +989,7 @@ function EditSheet({
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         placeholder="그라인드, 백화점, 2026"
-        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900"
+        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-zinc-900 sm:py-2.5"
       />
 
       <label className="mb-1 block text-base text-zinc-500">메모</label>
@@ -982,7 +1004,7 @@ function EditSheet({
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600"
+          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600 sm:py-2.5 sm:hover:bg-zinc-50"
         >
           취소
         </button>
@@ -990,7 +1012,7 @@ function EditSheet({
           type="button"
           disabled={pending}
           onClick={() => onSave({ title, tags: parseTags(tags), memo })}
-          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-50"
+          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-50 sm:py-2.5 sm:hover:bg-zinc-700"
         >
           {pending ? "저장 중…" : "저장"}
         </button>
