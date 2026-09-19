@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 예시 파일은 커밋할 수 있게 (실제 비밀값이 든 .env.local 은 계속 제외)
 !.env.local.example
+
+# root 소유로 잘못 만들어졌던 옛 .git 백업 (sudo 로 지우면 됨)
+/.git-old-root/

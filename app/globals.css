@@ -1,9 +1,20 @@
 @import "tailwindcss";
 
 html {
+  /* 기본 16px → 17px. 글씨·여백이 같이 조금씩 커진다 (노안 대응) */
+  font-size: 106.25%;
+
   /* 아이폰/안드로이드 기본 한글 폰트 우선 */
   font-family:
     -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
     "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* 폰에서 입력창을 눌렀을 때 화면이 확대되지 않도록 */
+input,
+textarea,
+select,
+button {
+  font-size: inherit;
 }
