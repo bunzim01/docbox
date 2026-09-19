@@ -418,6 +418,57 @@ export default function DocList({
         />
       )}
 
+      <DocRows
+        docs={atRoot ? [] : sorted}
+        folders={folders}
+        folderRows={searching || inNoFolder ? [] : children}
+        folderCounts={counts}
+        noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
+        onOpenNoFolder={() => goFolder(NO_FOLDER)}
+        onOpenFolder={goFolder}
+        onRenameFolder={(f) => setRenaming(f)}
+        onDeleteFolder={(folder) => {
+          const docCount = counts.get(folder.id) ?? 0;
+          const subCount = childFolders(folders, folder.id).length;
+          const parts = [`"${folder.name}" 폴더를 지울까요?`];
+          if (subCount > 0) parts.push(`하위폴더 ${subCount}개도 같이 지워집니다.`);
+          if (docCount > 0)
+            parts.push(`안에 있던 문서 ${docCount}개는 지워지지 않고 '분류 안 함' 으로 갑니다.`);
+          if (confirm(parts.join("\n"))) run(() => deleteFolder(folder.id));
+        }}
+        empty={
+          documents.length === 0
+            ? "아직 올린 문서가 없습니다.\n[업로드] 버튼으로 올려보세요."
+            : "이 폴더에는 문서가 없습니다."
+        }
+        menuId={menuId}
+        showFolderName={searching}
+        selecting={selecting}
+        picked={picked}
+        onPick={togglePick}
+        onMenu={(id) => setMenuId(menuId === id ? null : id)}
+        onEdit={(doc) => {
+          setEditing(doc);
+          setMenuId(null);
+        }}
+        onMove={(doc) => {
+          setMoving(doc);
+          setMenuId(null);
+        }}
+        onFavorite={(doc) => {
+          setMenuId(null);
+          run(() => setFavorite(doc.id, !doc.is_favorite));
+        }}
+        onDelete={(doc) => {
+          setMenuId(null);
+          if (confirm(`"${doc.title}" 을(를) 삭제할까요?\n파일도 같이 지워집니다.`)) {
+            run(() => deleteDocument(doc.id));
+          }
+        }}
+        onShared={() => router.refresh()}
+        onNotify={setToast}
+      />
+
       {atRoot ? (
         recent.length > 0 && (
           <>
@@ -439,56 +490,7 @@ export default function DocList({
             </ul>
           </>
         )
-      ) : (
-        <DocRows
-          docs={sorted}
-          folders={folders}
-          folderRows={searching || inNoFolder ? [] : children}
-          folderCounts={counts}
-          onOpenFolder={goFolder}
-          onRenameFolder={(f) => setRenaming(f)}
-          onDeleteFolder={(folder) => {
-            const docCount = counts.get(folder.id) ?? 0;
-            const subCount = childFolders(folders, folder.id).length;
-            const parts = [`"${folder.name}" 폴더를 지울까요?`];
-            if (subCount > 0) parts.push(`하위폴더 ${subCount}개도 같이 지워집니다.`);
-            if (docCount > 0)
-              parts.push(`안에 있던 문서 ${docCount}개는 지워지지 않고 '분류 안 함' 으로 갑니다.`);
-            if (confirm(parts.join("\n"))) run(() => deleteFolder(folder.id));
-          }}
-          empty={
-            documents.length === 0
-              ? "아직 올린 문서가 없습니다.\n[업로드] 버튼으로 올려보세요."
-              : "이 폴더에는 문서가 없습니다."
-          }
-          menuId={menuId}
-          showFolderName={searching}
-          selecting={selecting}
-          picked={picked}
-          onPick={togglePick}
-          onMenu={(id) => setMenuId(menuId === id ? null : id)}
-          onEdit={(doc) => {
-            setEditing(doc);
-            setMenuId(null);
-          }}
-          onMove={(doc) => {
-            setMoving(doc);
-            setMenuId(null);
-          }}
-          onFavorite={(doc) => {
-            setMenuId(null);
-            run(() => setFavorite(doc.id, !doc.is_favorite));
-          }}
-          onDelete={(doc) => {
-            setMenuId(null);
-            if (confirm(`"${doc.title}" 을(를) 삭제할까요?\n파일도 같이 지워집니다.`)) {
-              run(() => deleteDocument(doc.id));
-            }
-          }}
-          onShared={() => router.refresh()}
-          onNotify={setToast}
-        />
-      )}
+      ) : null}
 
       {!selecting && (
         <Link
@@ -724,6 +726,8 @@ function DocRows({
   folders,
   folderRows,
   folderCounts,
+  noFolderCount,
+  onOpenNoFolder,
   onOpenFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -745,6 +749,8 @@ function DocRows({
   folders: Folder[];
   folderRows: Folder[];
   folderCounts: Map<string, number>;
+  noFolderCount: number;
+  onOpenNoFolder: () => void;
   onOpenFolder: (id: string) => void;
   onRenameFolder: (folder: Folder) => void;
   onDeleteFolder: (folder: Folder) => void;
@@ -764,7 +770,7 @@ function DocRows({
 }) {
   const [folderMenu, setFolderMenu] = useState<string | null>(null);
 
-  if (docs.length === 0 && folderRows.length === 0) {
+  if (docs.length === 0 && folderRows.length === 0 && noFolderCount === 0) {
     return (
       <p className="whitespace-pre-line px-5 py-16 text-center text-base text-zinc-400">{empty}</p>
     );
@@ -834,6 +840,23 @@ function DocRows({
           )}
         </li>
       ))}
+
+      {noFolderCount > 0 && (
+        <li className="hidden items-center gap-3 px-5 py-1.5 hover:bg-zinc-100 sm:flex">
+          <button
+            type="button"
+            onClick={onOpenNoFolder}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <span className="shrink-0 text-2xl leading-none">📁</span>
+            <span className="truncate text-lg text-zinc-500">분류 안 함</span>
+            <span className="shrink-0 text-base text-zinc-400">{noFolderCount}</span>
+          </button>
+          <span className="hidden w-32 shrink-0 text-right text-base text-zinc-400 md:block">
+            폴더
+          </span>
+        </li>
+      )}
 
       {docs.map((doc) => {
         const folderName = folders.find((f) => f.id === doc.folder_id)?.name;
