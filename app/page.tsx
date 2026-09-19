@@ -28,7 +28,7 @@ export default async function HomePage() {
   } catch (e) {
     return (
       <main className="flex flex-1 flex-col px-5 py-6">
-        <h1 className="mb-6 text-3xl font-bold">문서함</h1>
+        <h1 className="mb-6 text-3xl font-bold">라이크웨이 자료실</h1>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-lg font-semibold">문서를 불러오지 못했습니다</p>
           <p className="mt-1 break-words text-lg text-zinc-600">

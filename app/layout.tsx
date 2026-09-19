@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "문서함",
+  title: "라이크웨이 자료실",
   description: "제안서를 모아두고 카톡으로 바로 보내기",
 };
 

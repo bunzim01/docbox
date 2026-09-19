@@ -12,7 +12,7 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-6">
       <form action={formAction} className="w-full max-w-sm">
-        <h1 className="mb-1 text-3xl font-bold text-zinc-900">문서함</h1>
+        <h1 className="mb-1 text-3xl font-bold text-zinc-900">라이크웨이 자료실</h1>
         <p className="mb-8 text-base text-zinc-500">
           제안서를 모아두고 카톡으로 바로 보내기
         </p>

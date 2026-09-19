@@ -124,7 +124,7 @@ export default function UploadForm({
       <header className="mb-4 flex items-center gap-3">
         <Link
           href="/"
-          aria-label="문서함으로"
+          aria-label="자료실로"
           className="-ml-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none text-zinc-700 active:bg-zinc-100 sm:h-10 sm:w-10 sm:text-2xl sm:hover:bg-zinc-100"
         >
           ←

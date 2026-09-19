@@ -230,7 +230,7 @@ export default function DocList({
     ? "전체 검색"
     : inNoFolder
       ? "분류 안 함"
-      : (currentFolder?.name ?? "문서함");
+      : (currentFolder?.name ?? "라이크웨이 자료실");
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-8">
@@ -256,7 +256,7 @@ export default function DocList({
             {path.length > 1 && !searching && (
               <p className="truncate text-base text-zinc-400">
                 <button type="button" onClick={() => goFolder(null)} className="underline">
-                  문서함
+                  자료실
                 </button>
                 {path.slice(0, -1).map((f) => (
                   <span key={f.id}>
@@ -643,7 +643,9 @@ function FolderSection({
                   </span>
                 ))}
               </span>
-              <span className="text-base text-zinc-400">{counts.get(folder.id) ?? 0}</span>
+              {(counts.get(folder.id) ?? 0) > 0 && (
+                <span className="text-base text-zinc-400">{counts.get(folder.id)}</span>
+              )}
             </button>
           ))}
 
