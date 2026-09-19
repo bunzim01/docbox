@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { Doc, Folder } from "@/lib/documents";
-import { fileBadge, formatDate, formatSize, parseTags } from "@/lib/format";
+import { fileBadge, folderNameLines, formatDate, formatSize, parseTags } from "@/lib/format";
 import {
   createFolder,
   deleteDocument,
@@ -136,7 +136,7 @@ export default function DocList({
         />
 
         {!atRoot && !searching && folders.length > 0 && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
             {folders.map((folder) => {
               const on = openFolder === folder.id;
               return (
@@ -144,11 +144,15 @@ export default function DocList({
                   key={folder.id}
                   type="button"
                   onClick={() => goFolder(folder.id)}
-                  className={`rounded-xl px-2 py-2.5 text-base leading-tight ${
+                  className={`rounded-xl px-1 py-2.5 text-base leading-tight ${
                     on ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-600"
                   }`}
                 >
-                  {folder.name}
+                  {folderNameLines(folder.name).map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
                 </button>
               );
             })}
@@ -156,7 +160,7 @@ export default function DocList({
               <button
                 type="button"
                 onClick={() => goFolder(NO_FOLDER)}
-                className={`rounded-xl px-2 py-2.5 text-base leading-tight ${
+                className={`rounded-xl px-1 py-2.5 text-base leading-tight ${
                   inNoFolder ? "bg-zinc-900 font-semibold text-white" : "bg-zinc-100 text-zinc-500"
                 }`}
               >
@@ -364,17 +368,21 @@ function FolderHome({
           ))}
         </ul>
       ) : (
-        <div className="mt-2 grid grid-cols-3 gap-3 px-5">
+        <div className="mt-2 grid grid-cols-3 gap-2 px-5">
           {folders.map((folder) => (
             <button
               key={folder.id}
               type="button"
               onClick={() => onOpen(folder.id)}
-              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-2 py-4 active:bg-zinc-100"
+              className="flex flex-col items-center gap-1 rounded-2xl bg-zinc-50 px-1 py-4 active:bg-zinc-100"
             >
               <span className="text-4xl leading-none">📁</span>
               <span className="text-center text-base font-semibold leading-tight">
-                {folder.name}
+                {folderNameLines(folder.name).map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
               </span>
               <span className="text-base text-zinc-400">{counts.get(folder.id) ?? 0}</span>
             </button>

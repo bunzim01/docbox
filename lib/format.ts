@@ -54,3 +54,14 @@ export function parseTags(input: string): string[] {
     .filter((t) => (seen.has(t) ? false : (seen.add(t), true)))
     .slice(0, 10);
 }
+
+/**
+ * 폴더 이름을 보기 좋게 두 줄로 나눈다.
+ * "체크리스트(벤더용)" → ["체크리스트", "(벤더용)"]
+ * 괄호가 없으면 한 줄 그대로.
+ */
+export function folderNameLines(name: string): string[] {
+  const i = name.indexOf("(");
+  if (i > 0) return [name.slice(0, i).trim(), name.slice(i).trim()];
+  return [name];
+}
