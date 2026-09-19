@@ -114,7 +114,7 @@ export default function UploadForm({
 
   return (
     <main className="flex flex-1 flex-col px-5 pb-10 pt-5">
-      <header className="mb-5 flex items-center gap-3">
+      <header className="mb-4 flex items-center gap-3">
         <Link
           href="/"
           aria-label="문서함으로"
@@ -122,7 +122,7 @@ export default function UploadForm({
         >
           ←
         </Link>
-        <h1 className="text-3xl font-bold">문서 올리기</h1>
+        <h1 className="text-xl font-bold">문서 올리기</h1>
       </header>
 
       <label className="mb-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 py-10 active:bg-zinc-50">

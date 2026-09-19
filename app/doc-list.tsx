@@ -107,8 +107,8 @@ export default function DocList({
 
   return (
     <main className="flex flex-1 flex-col pb-28">
-      <header className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-5 pb-3 pt-5">
-        <div className="mb-3 flex items-center gap-2">
+      <header className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-5 pb-3 pt-3">
+        <div className="mb-2 flex items-center gap-2">
           {openFolder && !searching && (
             <button
               type="button"
@@ -119,7 +119,7 @@ export default function DocList({
               ←
             </button>
           )}
-          <h1 className="flex-1 truncate text-3xl font-bold">
+          <h1 className="flex-1 truncate text-xl font-bold">
             {searching ? "전체 검색" : (currentFolder?.name ?? (inNoFolder ? "분류 안 함" : "문서함"))}
           </h1>
           <span className="shrink-0 text-base text-zinc-400">
@@ -332,7 +332,7 @@ function FolderHome({
 
   return (
     <>
-      <div className="flex items-center justify-between px-5 pt-5">
+      <div className="flex items-center justify-between px-5 pt-4">
         <h2 className="text-base font-semibold text-zinc-400">폴더</h2>
         <button
           type="button"
@@ -428,7 +428,7 @@ function FolderHome({
 
       {recent.length > 0 && !editMode && (
         <>
-          <h2 className="border-t border-zinc-100 px-5 pb-1 pt-6 text-base font-semibold text-zinc-400">
+          <h2 className="border-t border-zinc-100 px-5 pb-1 pt-5 text-base font-semibold text-zinc-400">
             최근 문서
           </h2>
           <ul className="divide-y divide-zinc-100">
