@@ -51,7 +51,7 @@ export default function DocList({
   const [moving, setMoving] = useState<DocView | null>(null);
   const [editFolders, setEditFolders] = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
-  const [sort, setSort] = useState<"recent" | "name">("recent");
+  const [sort, setSort] = useState<"recent" | "name">("name"); // 기본 가나다순
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [kakaoDocs, setKakaoDocs] = useState<DocView[] | null>(null);
@@ -64,7 +64,7 @@ export default function DocList({
 
   useEffect(() => {
     try {
-      if (localStorage.getItem("docbox-sort") === "name") setSort("name");
+      if (localStorage.getItem("docbox-sort") === "recent") setSort("recent");
     } catch {
       // 사생활 보호 모드 등에서 막히면 기본값(최신순)으로 둔다
     }
