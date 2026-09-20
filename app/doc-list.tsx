@@ -20,6 +20,7 @@ import {
 import { tellCats } from "@/lib/cat-events";
 import { canShareFiles, copyShareLinks, prefetchForShare, shareFiles } from "@/lib/share";
 import BackIcon from "./back-icon";
+import CatCare from "./cat-care";
 import Cats from "./cats";
 import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
@@ -426,12 +427,14 @@ export default function DocList({
             </button>
           )}
 
-          <Link
-            href={uploadHref}
-            className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
-          >
-            업로드
-          </Link>
+          {!atRoot && (
+            <Link
+              href={uploadHref}
+              className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
+            >
+              업로드
+            </Link>
+          )}
 
           {!atRoot && scoped.length > 0 && (
             <div className="hidden shrink-0 items-center gap-2 sm:flex">{sortSelect}</div>
@@ -520,7 +523,7 @@ export default function DocList({
         }}
         empty={
           documents.length === 0
-            ? "아직 올린 문서가 없습니다.\n[업로드] 버튼으로 올려보세요."
+            ? "아직 올린 문서가 없습니다.\n폴더에 들어가서 올려보세요."
             : "이 폴더에는 문서가 없습니다."
         }
         menuId={menuId}
@@ -597,7 +600,7 @@ export default function DocList({
         )
       ) : null}
 
-      {!selecting && !searching && !inNoFolder && (
+      {!selecting && !searching && !inNoFolder && !atRoot && (
         <QuickUpload folderId={openFolder} />
       )}
 
@@ -612,6 +615,8 @@ export default function DocList({
           </button>
         </div>
       )}
+
+      {atRoot && <CatCare />}
 
       {!searching &&
         !inNoFolder &&
@@ -645,7 +650,7 @@ export default function DocList({
         </button>
       )}
 
-      {!selecting && (
+      {!selecting && !atRoot && (
         <Link
           href={uploadHref}
           aria-label="문서 올리기"

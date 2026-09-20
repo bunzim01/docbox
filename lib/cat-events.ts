@@ -28,3 +28,11 @@ export function takePendingCatEvent(): CatEvent | null {
     return null;
   }
 }
+
+/** 돌보기 버튼 → 이윤을 불러 밥·물을 채우거나 츄르를 준다 */
+export type CareKind = "food" | "water" | "churu";
+
+export function careForCats(kind: CareKind) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("docbox:care", { detail: kind }));
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { takePendingCatEvent, type CatEvent } from "@/lib/cat-events";
+import { takePendingCatEvent, type CareKind, type CatEvent } from "@/lib/cat-events";
 import {
   BOWLS,
   BOWL_H,
@@ -40,6 +40,7 @@ const BH = BOWL_H * PX;
 const TICK = 130; // ms — 일부러 뚝뚝 끊기는 도트 느낌
 const FULL = 3; // 그릇이 가득 찬 정도
 const STORE = "docbox-bowls";
+const OWNER_SPEED = 6.5; // 이윤 걸음 (한 틱에 px) — 너무 느리면 그릇 채우기를 기다리기 답답하다
 
 type State =
   | "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump" | "eat";
@@ -67,19 +68,23 @@ type Cat = {
   watching?: boolean; // 올라온 파일 구경 중 (이때는 장난을 걸지 않는다)
 };
 
+type Task = BowlKind | "churu";
+
 type Owner = {
-  state: "away" | "enter" | "give" | "wave" | "leave";
+  state: "away" | "walk" | "pour" | "give" | "wave" | "leave";
   x: number;
+  dir: 1 | -1;
   ticks: number;
   frame: number;
   heart: number;
+  task?: Task; // 지금 하러 가는(하고 있는) 일
+  queue: Task[]; // 이어서 할 일
 };
 
 type World = {
   cats: Cat[];
   owner: Owner;
   bowls: Record<BowlKind, number>;
-  nextVisit: number; // 이윤이 알아서 들르기까지 남은 틱
 };
 
 const JUMP_ARC = [5, 9, 11, 9, 5, 0];
@@ -92,7 +97,8 @@ const isNight = () => {
 /** 그릇·이윤이 서는 자리 (화면 너비에 맞춰) */
 function places(width: number) {
   const food = Math.round(width * 0.3);
-  return { food, water: food + BW + 8, owner: Math.round(Math.min(width * 0.62, width - OW - 84)) };
+  const water = food + BW + 8;
+  return { food, water, owner: Math.round(Math.min(width * 0.62, width - OW - 84)) };
 }
 
 /** 그릇 앞에 서는 자리 — 태리는 왼쪽에서(오른쪽을 보고), 제리는 오른쪽에서(왼쪽을 보고) 마주 먹는다 */
@@ -176,11 +182,28 @@ function jump(cat: Cat, then: State = "sit", inPlace = false) {
   cat.inPlace = inPlace;
 }
 
-/** 이윤이 츄르를 들고 들어온다 */
-function callOwner(world: World, width: number) {
-  if (world.owner.state !== "away") return;
-  world.owner = { state: "enter", x: width + 6, ticks: 0, frame: 0, heart: 0 };
-  world.nextVisit = Math.round(rand(1900, 3700)); // 다음에 알아서 들르는 건 4~8분 뒤
+/** 이윤이 그 일을 하러 서는 자리 — 그릇 오른쪽에 서서 왼쪽으로 팔을 뻗는다 */
+function ownerSpot(task: Task, width: number): number {
+  const spots = places(width);
+  return task === "churu" ? spots.owner : spots[task] + 10;
+}
+
+/**
+ * 이윤을 부른다. 이윤은 밥·물을 채우거나 츄르를 줄 때만 나온다 (알아서 들르지 않는다).
+ * 이미 와 있으면 할 일 목록에 보탠다.
+ */
+function callOwner(world: World, width: number, task: Task) {
+  const owner = world.owner;
+  if (owner.task === task || owner.queue.includes(task)) return;
+  if (owner.state === "away" || owner.state === "leave" || owner.state === "wave") {
+    // 가까운 쪽 가장자리에서 들어온다 (그릇은 왼쪽에, 츄르 자리는 오른쪽에 가깝다)
+    if (owner.state === "away") owner.x = ownerSpot(task, width) < width / 2 ? -OW - 6 : width + 6;
+    owner.state = "walk";
+    owner.task = task;
+    owner.frame = 0;
+  } else {
+    owner.queue.push(task);
+  }
 }
 
 /** 앱에서 일어난 일에 반응한다 */
@@ -212,45 +235,78 @@ function step(world: World, width: number) {
 
   /* ----- 이윤 ----- */
   if (owner.heart > 0) owner.heart -= 1;
-  if (owner.state === "away") {
-    world.nextVisit -= 1;
-    if (world.nextVisit <= 0 && !isNight()) callOwner(world, width);
-  } else if (owner.state === "enter") {
-    owner.x -= 3.2;
-    owner.frame += 1;
-    if (owner.x <= spots.owner) {
-      owner.x = spots.owner;
-      owner.state = "give";
-      owner.ticks = 75;
-      // 츄르다! 둘 다 달려온다 (자고 있어도 벌떡)
-      cats.forEach((cat, i) => {
-        cat.alert = 8;
-        cat.eating = undefined;
-        goTo(cat, owner.x - W + 8 - i * 34, 1, "churu", true);
-      });
+  if (owner.state === "walk" && owner.task) {
+    const target = ownerSpot(owner.task, width);
+    if (Math.abs(owner.x - target) <= OWNER_SPEED) {
+      owner.x = target;
+      owner.dir = -1; // 일할 때는 왼쪽(그릇·고양이 쪽)을 본다
+      if (owner.task === "churu") {
+        owner.state = "give";
+        owner.ticks = 75;
+        // 츄르다! 둘 다 달려온다 (자고 있어도 벌떡)
+        cats.forEach((cat, i) => {
+          cat.alert = 8;
+          cat.eating = undefined;
+          goTo(cat, owner.x - W + 8 - i * 34, 1, "churu", true);
+        });
+      } else {
+        owner.state = "pour";
+        owner.ticks = 12;
+      }
+    } else {
+      owner.dir = target > owner.x ? 1 : -1;
+      owner.x += owner.dir * OWNER_SPEED;
+      owner.frame += 1;
     }
-  } else if (owner.state === "give") {
+  } else if (owner.state === "pour" || owner.state === "give") {
     owner.ticks -= 1;
     if (owner.ticks <= 0) {
-      owner.state = "wave";
-      owner.ticks = 14;
-      cats.forEach((cat) => {
-        if (cat.eating === "churu") {
-          cat.eating = undefined;
-          cat.hunger = 0;
-          cat.heart = 18;
-          jump(cat, "wag", true);
+      if (owner.state === "pour" && (owner.task === "food" || owner.task === "water")) {
+        // 다 부었다 — 그릇이 가득 차고, 배고픈 애들이 달려온다
+        const kind = owner.task;
+        world.bowls[kind] = FULL;
+        saveBowls(world.bowls);
+        for (const cat of cats) {
+          const need = kind === "food" ? cat.hunger : cat.thirst;
+          if (need > 90 && cat.goal === undefined && cat.state !== "eat") {
+            cat.alert = 6;
+            const s = spotAt(cat, spots[kind]);
+            goTo(cat, s.x, s.face, kind, true);
+          }
         }
-      });
+      } else {
+        cats.forEach((cat) => {
+          if (cat.eating === "churu") {
+            cat.eating = undefined;
+            cat.hunger = 0;
+            cat.heart = 18;
+            jump(cat, "wag", true);
+          }
+        });
+      }
+      const nextTask = owner.queue.shift();
+      if (nextTask) {
+        owner.task = nextTask;
+        owner.state = "walk";
+      } else {
+        owner.task = undefined;
+        owner.state = "wave";
+        owner.ticks = 12;
+        owner.frame = 0;
+      }
     }
   } else if (owner.state === "wave") {
     owner.ticks -= 1;
     owner.frame += 1;
-    if (owner.ticks <= 0) owner.state = "leave";
+    if (owner.ticks <= 0) {
+      owner.state = "leave";
+      owner.frame = 0;
+    }
   } else if (owner.state === "leave") {
-    owner.x += 3.2;
+    if (owner.frame === 0) owner.dir = owner.x + OW / 2 < width / 2 ? -1 : 1; // 가까운 쪽으로 나간다
+    owner.x += owner.dir * OWNER_SPEED;
     owner.frame += 1;
-    if (owner.x > width + 10) owner.state = "away";
+    if (owner.x > width + 10 || owner.x < -OW - 10) owner.state = "away";
   }
 
   /* ----- 고양이 ----- */
@@ -274,7 +330,7 @@ function step(world: World, width: number) {
             cat.watching = true;
             cat.state = "wag";
             cat.ticks = Math.round(rand(40, 55));
-          } else if (what === "churu" && owner.state === "give") {
+          } else if (what === "churu" && (owner.state === "give" || owner.task === "churu")) {
             cat.state = "eat";
             cat.eating = "churu";
             cat.ticks = 400; // 이윤이 일어날 때까지
@@ -345,7 +401,7 @@ function step(world: World, width: number) {
   const awake = (c: Cat) =>
     c.goal === undefined && !c.watching && ["walk", "sit", "wag", "groom"].includes(c.state);
 
-  if (owner.state !== "away") return; // 이윤이 와 있을 땐 장난 금지
+  if (owner.task === "churu") return; // 츄르 시간엔 장난 금지
 
   if (awake(a) && awake(b) && dist < W * 1.3 && Math.random() < 0.05) {
     // 장난: 한 마리가 덮치고, 다른 한 마리는 놀라 도망 → 쫓아간다
@@ -410,7 +466,7 @@ function frameOf(cat: Cat): FrameName {
 }
 
 function ownerFrame(owner: Owner): OwnerFrame {
-  if (owner.state === "give") return "give";
+  if (owner.state === "give" || owner.state === "pour") return "give";
   if (owner.state === "wave") return Math.floor(owner.frame / 3) % 2 === 0 ? "wave" : "stand";
   return Math.floor(owner.frame / 2) % 2 === 0 ? "walkA" : "walkB";
 }
@@ -465,7 +521,12 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     }
     const owner = {} as Record<string, [string, string][]>;
     for (const [name, rows] of Object.entries(OWNER_FRAMES)) owner[name] = toPaths(rows, OWNER_PALETTE);
-    return { cats, bowls, owner, churu: toPaths(CHURU_ICON, OWNER_PALETTE) };
+    // 손에 든 것만 색을 바꾼다: 사료 봉지(갈색) · 물병(하늘색)
+    const pour = {
+      food: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#8a5a2b", c: "#c9925a" }),
+      water: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#6f9cc4", c: "#bfe3fb" }),
+    };
+    return { cats, bowls, owner, pour, churu: toPaths(CHURU_ICON, OWNER_PALETTE) };
   }, []);
 
   useEffect(() => {
@@ -496,9 +557,8 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
         cat("taeri", width * 0.12, 1, still ? "sit" : "walk", 40),
         cat("jeri", width * 0.68, -1, still ? "sleep" : "sit", 25),
       ],
-      owner: { state: "away", x: width + 6, ticks: 0, frame: 0, heart: 0 },
+      owner: { state: "away", x: width + 6, dir: -1, ticks: 0, frame: 0, heart: 0, queue: [] },
       bowls,
-      nextVisit: Math.round(rand(700, 1500)), // 처음엔 1.5~3분쯤 뒤에 한 번 들른다
     };
     redraw();
 
@@ -511,6 +571,15 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       if (worldRef.current) react(worldRef.current, type, boxRef.current?.clientWidth ?? 360);
     };
     window.addEventListener("docbox:cat", onNews);
+
+    // 홈 화면의 [밥 주기 · 물 주기 · 츄르 주기] 버튼
+    const onCare = (e: Event) => {
+      const kind = (e as CustomEvent<CareKind>).detail;
+      if (!worldRef.current) return;
+      callOwner(worldRef.current, boxRef.current?.clientWidth ?? 360, kind);
+      redraw();
+    };
+    window.addEventListener("docbox:care", onCare);
     const pendingNews = takePendingCatEvent();
     if (pendingNews) react(worldRef.current, pendingNews, width);
 
@@ -522,6 +591,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     return () => {
       clearInterval(timer);
       window.removeEventListener("docbox:cat", onNews);
+      window.removeEventListener("docbox:care", onCare);
     };
   }, []);
 
@@ -530,20 +600,14 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
   const width = boxRef.current?.clientWidth ?? 360;
   const spots = places(width);
 
-  /** 그릇을 누르면 가득 채운다 — 배고픈 애들이 달려온다 */
+  /** 그릇을 누르면 이윤이 와서 채워준다 (움직임을 줄인 기기에서는 바로 채워진다) */
   function refill(kind: BowlKind) {
     if (!world) return;
-    world.bowls[kind] = FULL;
-    saveBowls(world.bowls);
-    if (!stillRef.current && world.owner.state === "away") {
-      for (const cat of world.cats) {
-        const need = kind === "food" ? cat.hunger : cat.thirst;
-        if (need > 90 && cat.goal === undefined && cat.state !== "eat") {
-          cat.alert = 6;
-          const s = spotAt(cat, spots[kind]);
-          goTo(cat, s.x, s.face, kind, true);
-        }
-      }
+    if (stillRef.current) {
+      world.bowls[kind] = FULL;
+      saveBowls(world.bowls);
+    } else {
+      callOwner(world, width, kind);
     }
     redraw();
   }
@@ -570,12 +634,16 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
               style={{ left: world.owner.x, width: OW, height: OH }}
             >
               <Sprite
-                paths={art.owner[ownerFrame(world.owner)]}
+                paths={
+                  world.owner.state === "pour" && world.owner.task && world.owner.task !== "churu"
+                    ? art.pour[world.owner.task]
+                    : art.owner[ownerFrame(world.owner)]
+                }
                 w={OWNER_W}
                 h={OWNER_H}
                 width={OW}
                 height={OH}
-                flip={world.owner.state !== "leave"}
+                flip={world.owner.dir === -1}
               />
               {world.owner.heart > 0 && (
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-ink">
@@ -644,12 +712,12 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
           ))}
 
           {/* 츄르 — 누르면 이윤이 주러 온다 */}
-          {world.owner.state === "away" && !stillRef.current && (
+          {world.owner.task !== "churu" && !world.owner.queue.includes("churu") && !stillRef.current && (
             <button
               type="button"
               tabIndex={-1}
               onClick={() => {
-                callOwner(world, width);
+                callOwner(world, width, "churu");
                 redraw();
               }}
               className="pointer-events-auto absolute bottom-0 cursor-pointer select-none bg-transparent p-1"
