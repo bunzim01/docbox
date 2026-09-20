@@ -92,3 +92,21 @@ li {
     animation: none;
   }
 }
+
+/* 자는 고양이 위로 떠오르는 z */
+@keyframes cat-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 4px) scale(0.8);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(6px, -10px) scale(1.2);
+  }
+}
+.cat-zzz {
+  animation: cat-zzz 1.8s ease-out infinite;
+}

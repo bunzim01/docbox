@@ -19,6 +19,7 @@ import {
 } from "@/lib/format";
 import { canShareFiles, copyShareLinks, prefetchForShare, shareFiles } from "@/lib/share";
 import BackIcon from "./back-icon";
+import Cats from "./cats";
 import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
 import HomeIcon from "./home-icon";
@@ -352,7 +353,7 @@ export default function DocList({
       : (currentFolder?.name ?? "라이크웨이 자료실");
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-8">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-20">
       <header
         className={`sticky top-0 z-10 border-b border-zinc-200 bg-cream/95 px-5 pb-3 backdrop-blur ${
           atRoot ? "pt-6" : "pt-3"
@@ -711,6 +712,8 @@ export default function DocList({
           }
         />
       )}
+
+      <Cats hidden={selecting} />
 
       {kakaoDocs && <KakaoSheet docs={kakaoDocs} onClose={() => setKakaoDocs(null)} />}
 
