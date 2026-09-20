@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { extFromFileName, titleFromFileName } from "@/lib/format";
+import { tellCats } from "@/lib/cat-events";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { discardUploadedFile, prepareUpload, saveDocument } from "./actions";
 
@@ -64,6 +65,7 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
     setBusy(false);
     setTotal(0);
     if (failed === 0) setError("");
+    if (failed < list.length) tellCats("upload");
     router.refresh();
   }
 

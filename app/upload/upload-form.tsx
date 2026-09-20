@@ -6,6 +6,7 @@ import { useState } from "react";
 import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions";
 import type { Folder } from "@/lib/documents";
 import { extFromFileName, flattenFolders, formatSize, parseTags, titleFromFileName } from "@/lib/format";
+import { tellCats } from "@/lib/cat-events";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import BackIcon from "@/app/back-icon";
 import FileIcon from "@/app/file-icon";
@@ -117,6 +118,8 @@ export default function UploadForm({
     setBusy(false);
 
     if (failed === 0) {
+      // 자료실로 돌아가면 고양이들이 구경하러 온다
+      tellCats("upload", { afterNavigation: true });
       // 올린 폴더로 돌아가서 바로 확인
       router.push(folderId ? `/?f=${folderId}` : "/");
       router.refresh();

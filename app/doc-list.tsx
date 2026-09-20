@@ -17,6 +17,7 @@ import {
   parseTags,
   viewUrl,
 } from "@/lib/format";
+import { tellCats } from "@/lib/cat-events";
 import { canShareFiles, copyShareLinks, prefetchForShare, shareFiles } from "@/lib/share";
 import BackIcon from "./back-icon";
 import Cats from "./cats";
@@ -233,6 +234,7 @@ export default function DocList({
         const result = await shareFiles(pickedDocs);
         if (result.status === "shared") {
           setToast(`✓ ${picked.length}개 보냈습니다`);
+          tellCats("sent");
           await markSentMany(picked);
           setSelecting(false);
           setPicked([]);

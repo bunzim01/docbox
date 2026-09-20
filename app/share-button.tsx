@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { DocView } from "@/lib/documents";
 import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import { tellCats } from "@/lib/cat-events";
 import { markSent } from "./actions";
 import KakaoIcon from "./kakao-icon";
 
@@ -41,6 +42,7 @@ export default function ShareButton({
         if (result.status === "shared") {
           setReady(false);
           onNotify("✓ 보냈습니다");
+          tellCats("sent");
           await markSent(doc.id);
           onDone();
           return;

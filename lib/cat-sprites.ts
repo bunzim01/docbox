@@ -8,7 +8,11 @@ export type CatFrame = string[];
 export const CAT_W = 20;
 export const CAT_H = 11;
 
-export const FRAMES: Record<"walkA" | "walkB" | "sit" | "sleep" | "jump", CatFrame> = {
+export type FrameName =
+  | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
+  | "groomA" | "groomB" | "stretch";
+
+export const FRAMES: Record<FrameName, CatFrame> = {
   walkA: [
     "....................",
     ".............P...P..",
@@ -47,6 +51,61 @@ export const FRAMES: Record<"walkA" | "walkB" | "sit" | "sleep" | "jump", CatFra
     ".PP....BBSBBBBB.....",
     "..PPPPPBBBBBBBB.....",
     ".......PP..PP.PP....",
+  ],
+  // 앉아서 꼬리를 위로 (sit 과 번갈아 보여주면 꼬리 흔들기)
+  sitWag: [
+    "..........P...P.....",
+    "..........PI.IP.....",
+    "..........BBBBB.....",
+    "..........BEMEB.....",
+    "P.........BMNMB.....",
+    "P........BBWWWB.....",
+    ".P......BBSBWWB.....",
+    ".P......BBBBBBB.....",
+    "..P....BBSBBBBB.....",
+    "..PPPPPBBBBBBBB.....",
+    ".......PP..PP.PP....",
+  ],
+  // 그루밍: 눈을 감고 앞발을 들어 핥는다 (A/B 를 번갈아)
+  groomA: [
+    "....................",
+    "...........P...P....",
+    "...........PI.IP....",
+    "...........BBBBB....",
+    "...........BCMCB....",
+    ".........BBBMNMBP...",
+    "........BBSBWWWPP...",
+    ".P......BBBBBBBP....",
+    ".PP....BBSBBBBB.....",
+    "..PPPPPBBBBBBBB.....",
+    ".......PP..PP.......",
+  ],
+  groomB: [
+    "....................",
+    "....................",
+    "...........P...P....",
+    "...........PI.IP....",
+    "...........BBBBB....",
+    ".........BBBCMCBP...",
+    "........BBSBMNMPP...",
+    ".P......BBBBWWWP....",
+    ".PP....BBSBBBBB.....",
+    "..PPPPPBBBBBBBB.....",
+    ".......PP..PP.......",
+  ],
+  // 기지개: 엉덩이는 들고 앞발은 쭉
+  stretch: [
+    "....................",
+    ".P..................",
+    ".P..................",
+    "..P.BBBB............",
+    "..PBBBBBBB..........",
+    "..BBBSBBBBBB.P...P..",
+    "..BBBBBBSBBBBPI.IP..",
+    "..PP.BBBBBBBBBBBBB..",
+    "..PP...BBBBBBBCMCB..",
+    "..PP.....BBBBBMNMB..",
+    ".PPP.....PPPPPPWWPP.",
   ],
   sleep: [
     "....................",
