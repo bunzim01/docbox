@@ -180,7 +180,7 @@ NEXT_PUBLIC_APP_URL=           # 배포 주소, 공유 링크 만들 때 사용
 
 ## PWA (홈 화면에 추가)
 - `app/manifest.ts` → `/manifest.webmanifest`. 홈 화면 이름은 **자료실**(short_name), 전체 이름은 라이크웨이 자료실
-- 아이콘: 잉크 바탕 + 골드 폴더. `public/icons/`(192·512·maskable), `app/icon.png`, `app/apple-icon.png`
+- 아이콘: 크림(라이크웨이 톤) 바탕 + 골드 폴더 — 남색 바탕은 칙칙하다고 해서 바꿨다. `public/icons/`(192·512·maskable), `app/icon.png`, `app/apple-icon.png`
 - 아이콘·manifest 는 로그인 없이 열려야 한다 (`proxy.ts` matcher 에서 제외돼 있음)
 - 서비스 워커는 두지 않는다 — 로그인·실시간 목록 앱이라 캐시가 낡는 문제가 더 크다
 
