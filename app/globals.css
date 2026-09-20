@@ -28,24 +28,31 @@
     "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
 }
 
-html {
-  /* 기본 16px → 17px. 글씨·여백이 같이 조금씩 커진다 (노안 대응) */
-  font-size: 106.25%;
-  font-family: var(--font-sans);
-  -webkit-tap-highlight-color: transparent;
-}
+/*
+ * @layer base 안에 넣어야 한다.
+ * 바깥에 두면 Tailwind 의 text-xs 같은 글씨 크기 지정이 전부 무시된다
+ * (레이어 없는 규칙이 레이어 안 규칙을 이기기 때문).
+ */
+@layer base {
+  html {
+    /* 기본 16px → 17px. 글씨·여백이 같이 조금씩 커진다 (노안 대응) */
+    font-size: 106.25%;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
 
-body {
-  letter-spacing: -0.01em;
-}
+  body {
+    letter-spacing: -0.01em;
+  }
 
-/* 폰에서 입력창을 눌렀을 때 화면이 확대되지 않도록 */
-input,
-textarea,
-select,
-button {
-  font-size: inherit;
-  font-family: inherit;
+  /* 폰에서 입력창을 눌렀을 때 화면이 확대되지 않도록 */
+  input,
+  textarea,
+  select,
+  button {
+    font-size: inherit;
+    font-family: inherit;
+  }
 }
 
 /* 누르고 올릴 때 색이 부드럽게 바뀌도록 */

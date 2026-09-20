@@ -12,6 +12,12 @@ import {
   CAT_W,
   FRAMES,
   OWNER_FRAMES,
+  OWNER_NAP,
+  NAP_H,
+  NAP_W,
+  PILLOW,
+  PILLOW_H,
+  PILLOW_W,
   OWNER_H,
   OWNER_NAME,
   OWNER_PALETTE,
@@ -40,6 +46,8 @@ const OW = OWNER_W * PX;
 const OH = OWNER_H * PX;
 const BW = BOWL_W * PX;
 const BH = BOWL_H * PX;
+const NW = NAP_W * PX;
+const NH = NAP_H * PX;
 const TICK = 130; // ms — 일부러 뚝뚝 끊기는 도트 느낌
 const FULL = 3; // 그릇이 가득 찬 정도
 const STORE = "docbox-bowls";
@@ -50,7 +58,7 @@ type State =
   | "stalk" // 사냥놀이: 납작 엎드려 엉덩이 씰룩
   | "pounce" // 크게 도약해 덮친다
   | "zoom"; // 우다다 — 끝에서 끝까지 전속력
-type Arrive = "watch" | "food" | "water" | "churu" | "beg" | "play";
+type Arrive = "watch" | "food" | "water" | "churu" | "beg" | "play" | "nap";
 
 const HUNGRY = 1500; // 틱 (약 3분)
 const THIRSTY = 1900; // 틱 (약 4분)
@@ -78,13 +86,14 @@ type Cat = {
   watching?: boolean; // 올라온 파일 구경 중 (이때는 장난을 걸지 않는다)
   leap?: number; // 덮칠 때 한 틱에 나아가는 거리 (사냥감까지 닿도록 계산)
   playing?: boolean; // 낚싯대 놀이 중
+  napping?: boolean; // 이윤 옆에서 같이 낮잠 중
   margin?: number; // 우다다 때 벽 앞에서 돌아서는 거리 — 쫓는 애는 조금 일찍 돌아 뒤를 따라간다
 };
 
-type Task = BowlKind | "churu" | "play";
+type Task = BowlKind | "churu" | "play" | "nap";
 
 type Owner = {
-  state: "away" | "walk" | "pour" | "give" | "play" | "wave" | "leave";
+  state: "away" | "walk" | "pour" | "give" | "play" | "nap" | "wave" | "leave";
   x: number;
   dir: 1 | -1;
   ticks: number;
@@ -206,6 +215,7 @@ function jump(cat: Cat, then: State = "sit", inPlace = false) {
 /** 이윤이 그 일을 하러 서는 자리 — 그릇 오른쪽에 서서 왼쪽으로 팔을 뻗는다 */
 function ownerSpot(task: Task, width: number): number {
   const spots = places(width);
+  if (task === "nap") return Math.round(width / 2 - NW / 2); // 낮잠은 화면 한가운데
   return task === "churu" || task === "play" ? spots.owner : spots[task] + 10;
 }
 
@@ -261,7 +271,17 @@ function step(world: World, width: number) {
     if (Math.abs(owner.x - target) <= OWNER_SPEED) {
       owner.x = target;
       owner.dir = -1; // 일할 때는 왼쪽(그릇·고양이 쪽)을 본다
-      if (owner.task === "play") {
+      if (owner.task === "nap") {
+        owner.state = "nap";
+        owner.ticks = 150;
+        owner.frame = 0;
+        // 이윤 양옆으로 와서 같이 쿨쿨
+        cats.forEach((cat, i) => {
+          cat.eating = undefined;
+          const x = i === 0 ? owner.x - W - 4 : owner.x + NW + 4;
+          goTo(cat, x, i === 0 ? 1 : -1, "nap");
+        });
+      } else if (owner.task === "play") {
         owner.state = "play";
         owner.ticks = 72;
         owner.frame = 0;
@@ -288,6 +308,28 @@ function step(world: World, width: number) {
       owner.dir = target > owner.x ? 1 : -1;
       owner.x += owner.dir * OWNER_SPEED;
       owner.frame += 1;
+    }
+  } else if (owner.state === "nap") {
+    owner.ticks -= 1;
+    if (owner.ticks <= 0) {
+      cats.forEach((cat) => {
+        if (!cat.napping) return;
+        cat.napping = false;
+        cat.watching = false;
+        cat.state = "stretch"; // 잘 잤다
+        cat.frame = 0;
+        cat.ticks = Math.round(rand(12, 18));
+      });
+      const nextTask = owner.queue.shift();
+      if (nextTask) {
+        owner.task = nextTask;
+        owner.state = "walk";
+      } else {
+        owner.task = undefined;
+        owner.state = "wave";
+        owner.ticks = 12;
+        owner.frame = 0;
+      }
     }
   } else if (owner.state === "play") {
     owner.ticks -= 1;
@@ -405,6 +447,11 @@ function step(world: World, width: number) {
             cat.state = "eat";
             cat.eating = "churu";
             cat.ticks = 400; // 이윤이 일어날 때까지
+          } else if (what === "nap" && (owner.state === "nap" || owner.task === "nap")) {
+            cat.napping = true;
+            cat.watching = true; // 자는 동안엔 장난 금지
+            cat.state = "sleep";
+            cat.ticks = 400;
           } else if (what === "play" && owner.state === "play") {
             cat.playing = true;
             cat.watching = true; // 놀이 중엔 서로 장난 걸지 않는다
@@ -531,7 +578,7 @@ function step(world: World, width: number) {
   const awake = (c: Cat) =>
     c.goal === undefined && !c.watching && ["walk", "sit", "wag", "groom"].includes(c.state);
 
-  if (owner.task === "churu" || owner.task === "play") return; // 츄르·놀이 시간엔 따로 장난치지 않는다
+  if (owner.task === "churu" || owner.task === "play" || owner.task === "nap") return; // 츄르·놀이·낮잠 중엔 장난 금지
 
   if (awake(a) && awake(b) && dist > W * 1.2 && dist < W * 2.6 && Math.random() < 0.012) {
     // 사냥놀이: 멀찍이서 납작 엎드려 엉덩이를 씰룩이다가 덮친다
@@ -693,7 +740,15 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       toyA: toPaths(TOY_FRAMES.toyA, TOY_PALETTE),
       toyB: toPaths(TOY_FRAMES.toyB, TOY_PALETTE),
     };
-    return { cats, bowls, owner, pour, toy };
+    return {
+      cats,
+      bowls,
+      owner,
+      pour,
+      toy,
+      nap: toPaths(OWNER_NAP, OWNER_PALETTE),
+      pillow: toPaths(PILLOW, OWNER_PALETTE),
+    };
   }, []);
 
   useEffect(() => {
@@ -792,8 +847,9 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     <div
       ref={boxRef}
       aria-hidden="true"
-      className="pointer-events-none fixed bottom-0 left-0 right-0 z-10 mx-auto w-full max-w-4xl"
-      style={{ height: OH + 22 }}
+      className="pointer-events-none fixed left-0 right-0 z-10 mx-auto w-full max-w-4xl"
+      // 아이폰 홈 바에 고양이가 잘리지 않도록 화면 맨 아래에서 띄운다
+      style={{ height: OH + 22, bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
     >
       {world && (
         <>
@@ -807,20 +863,49 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
                 redraw();
               }}
               className="pointer-events-auto absolute bottom-0 cursor-pointer select-none bg-transparent p-0"
-              style={{ left: world.owner.x, width: OW, height: OH }}
+              style={{
+                left: world.owner.x,
+                width: world.owner.state === "nap" ? NW : OW,
+                height: world.owner.state === "nap" ? NH : OH,
+              }}
             >
-              <Sprite
-                paths={
-                  world.owner.state === "pour" && (world.owner.task === "food" || world.owner.task === "water")
-                    ? art.pour[world.owner.task]
-                    : art.owner[ownerFrame(world.owner)]
-                }
-                w={OWNER_W}
-                h={OWNER_H}
-                width={OW}
-                height={OH}
-                flip={world.owner.dir === -1}
-              />
+              {world.owner.state === "nap" ? (
+                <Sprite paths={art.nap} w={NAP_W} h={NAP_H} width={NW} height={NH} />
+              ) : (
+                <>
+                  <Sprite
+                    paths={
+                      world.owner.state === "pour" &&
+                      (world.owner.task === "food" || world.owner.task === "water")
+                        ? art.pour[world.owner.task]
+                        : art.owner[ownerFrame(world.owner)]
+                    }
+                    w={OWNER_W}
+                    h={OWNER_H}
+                    width={OW}
+                    height={OH}
+                    flip={world.owner.dir === -1}
+                  />
+                  {/* 낮잠 자러 올 때는 베개를 품에 안고 온다 */}
+                  {world.owner.task === "nap" && world.owner.state === "walk" && (
+                    <div
+                      className="absolute"
+                      style={{ left: 3, bottom: OH - 28, width: PILLOW_W * PX, height: PILLOW_H * PX }}
+                    >
+                      <Sprite
+                        paths={art.pillow}
+                        w={PILLOW_W}
+                        h={PILLOW_H}
+                        width={PILLOW_W * PX}
+                        height={PILLOW_H * PX}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+              {world.owner.state === "nap" && (
+                <span className="cat-zzz absolute -top-2 left-8 text-xs font-bold text-zinc-400">z</span>
+              )}
               {world.owner.heart > 0 && (
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-ink">
                   {OWNER_NAME} <span className="text-red-500">♥</span>
@@ -843,7 +928,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
                     cat.heart = 0;
                     redraw();
                   }, 1500);
-                } else if (!["jump", "eat", "stalk", "pounce", "zoom"].includes(cat.state)) {
+                } else if (!["jump", "eat", "stalk", "pounce", "zoom"].includes(cat.state) && !cat.napping) {
                   jump(cat, "sit");
                 }
                 redraw();

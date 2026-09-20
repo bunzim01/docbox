@@ -10,7 +10,7 @@ export type Folder = {
 /** 폴더 깊이 제한 — 맨 위(1차) / 2차 / 3차 까지만 */
 export const MAX_FOLDER_DEPTH = 3;
 
-export type DocView = Doc & { fileUrl: string };
+export type DocView = Doc & { fileUrl: string; downloadUrl: string };
 
 /** 휴지통에 보관하는 기간 */
 export const TRASH_DAYS = 30;
@@ -128,5 +128,9 @@ export function downloadFileName(title: string, fileType: string | null): string
 
 /** 화면에 내려보낼 때 파일 주소를 같이 붙인다 */
 export function withFileUrl(doc: Doc): DocView {
-  return { ...doc, fileUrl: fileUrl(doc.file_path) };
+  return {
+    ...doc,
+    fileUrl: fileUrl(doc.file_path),
+    downloadUrl: fileUrl(doc.file_path, downloadFileName(doc.title, doc.file_type)),
+  };
 }

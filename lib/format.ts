@@ -172,14 +172,11 @@ export function matchesQuery(text: string, query: string): boolean {
 }
 
 /**
- * 문서를 눌렀을 때 바로 열 주소.
- * PDF 는 브라우저가 직접 보여주고, 오피스 문서는 브라우저가 못 열어서 온라인 뷰어로 보낸다.
- * 그 외(한글 등)는 파일 주소 그대로 — 기기에서 내려받아 연다.
+ * 문서를 눌렀을 때 열 주소.
+ * PDF 는 브라우저가 그 자리에서 보여주고, 그 밖의 문서(엑셀·워드·PPT·한글)는
+ * 기기가 직접 열도록 제목이 붙은 파일 주소를 준다.
+ * (오피스 온라인 뷰어는 열리기까지 10초가 넘게 걸려 안 열리는 것처럼 보였다)
  */
-export function viewUrl(fileUrl: string, fileType: string | null): string {
-  const t = (fileType ?? "").toLowerCase();
-  if (["ppt", "pptx", "doc", "docx", "xls", "xlsx"].includes(t)) {
-    return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}`;
-  }
-  return fileUrl;
+export function viewUrl(doc: { fileUrl: string; downloadUrl: string; file_type: string | null }): string {
+  return (doc.file_type ?? "").toLowerCase() === "pdf" ? doc.fileUrl : doc.downloadUrl;
 }

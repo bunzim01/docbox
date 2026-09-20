@@ -213,7 +213,7 @@ const bowlPalettes = {
 
 /* ---------- 주인 이윤 (20x24칸) — 긴 머리, 분홍 니트, 남색 치마. 오른쪽을 보는 기준 ---------- */
 // 글자: O 외곽선  H 머리  h 머리 윤기  S 피부  s 볼터치·입  E 눈  W 눈 반짝임  T 윗옷  t 윗옷 그늘  K 치마  B 신발
-//       C 츄르 봉지  c 츄르 끝(내용물)
+//       C 츄르 봉지  c 츄르 끝(내용물)  Z 베개  z 베개 밝은 면  e 감은 눈
 const O_HEAD = [
   ".....OOOOOO.....",
   "....OHHhhHHO....",
@@ -230,11 +230,11 @@ const O_HEAD = [
 const O_TORSO = [
   "..OHHOTTTTOHHO..",
   "..OHOTTTTTTOHO..",
-  "..OHSTTTTTTSHO..",
-  "...OSTTTTTTSO...",
-  "....OTTTTTTO....",
-  "....OKKKKKKO....",
-  "...OKKKKKKKKO...",
+  ".OOTTTTTTTTTTOO.",
+  ".OTTOTTTTTTOTTO.",
+  ".OSSOTTTTTTOSSO.",
+  ".OSSOKKKKKKOSSO.",
+  "..OOKKKKKKKKOO..",
   "...OOOOOOOOOO...",
 ];
 const O_LEGS_STAND = [".....OSOOSO.....", ".....OSOOSO.....", ".....OSOOSO.....", "....OBBOOBBO....", "....OOOOOOOO...."];
@@ -243,27 +243,54 @@ const O_LEGS_B = ["......OSSO......", "......OSSO......", "......OSSO......", ".
 // 쪼그려 앉아 츄르를 내민다 (팔과 츄르가 오른쪽으로 뻗는다)
 const O_TORSO_GIVE = [
   "..OHHOTTTTOHHO......",
-  "..OHOTTTTTTOOOOO....",
-  "..OHSTTTTTTTTTSOCCCc",
-  "...OSTTTTTTOOOOOCCCc",
-  "....OTTTTTTO........",
-  "...OKKKKKKKKO.......",
-  "..OKKKKKKKKKKO......",
-  "..OBBOOOOOOBBO......",
-  "..OOOOOOOOOOOO......",
+  "..OHOTTTTTTOOOOOOO..",
+  ".OOTTTTTTTTTTTTSSCCc",
+  ".OTTOTTTTTTOOOOSSCCc",
+  ".OSSOTTTTTTO...OO...",
+  "..OKKKKKKKKKO.......",
+  ".OKKKKKKKKKKKO......",
+  ".OBBOOOOOOOBBO......",
+  ".OOOOOOOOOOOOO......",
 ];
 // 손 흔들기 (한쪽 팔을 든다)
 const O_TORSO_WAVE = [
-  "..OHHOTTTTOHHOSO",
-  "..OHOTTTTTTOHOSO",
-  "..OHSTTTTTTTTTO.",
-  "...OSTTTTTTOOO..",
-  "....OTTTTTTO....",
-  "....OKKKKKKO....",
-  "...OKKKKKKKKO...",
-  "...OOOOOOOOOO...",
+  "..OHHOTTTTOHHO.SSO",
+  "..OHOTTTTTTOHOOTTO",
+  ".OOTTTTTTTTTTOTTO.",
+  ".OTTOTTTTTTOTTO...",
+  ".OSSOTTTTTTOSO....",
+  ".OSSOKKKKKKOO.....",
+  "..OOKKKKKKKKO.....",
+  "...OOOOOOOOOO.....",
 ];
 const OW = 20, OH = 24;
+// 낮잠 장면은 가로로 길어서 따로 그린다 (베개 벤 이윤)
+const NAP_W = 46, NAP_H = 14;
+const pad = (rows, w) => rows.map((r) => (r + ".".repeat(w)).slice(0, w));
+const O_NAP = pad([
+  "",
+  "....ZZZZZZZZZZ",
+  "...ZzzzzzzzzzzZ",
+  "...ZzOHHHHHHHHOZ",
+  "...ZzOHHHHHHHHHOOOOOOOOOOOOOOOOOOOOOOOOOO",
+  "...ZzOHHSSSSSSHOTTTTTTTTTTTTKKKKKKKKSSSSSSO",
+  "...ZzOHeSSSSSeHOTTTTTTTTTTTTKKKKKKKKSSSSSSSO",
+  "...ZzOHSSSSSSSHOTTTTTTTTTTTTKKKKKKKKSSSSSSSO",
+  "....ZOHHSSSSSHHOTTTTTTTTTTTTKKKKKKKKSSSSSSO",
+  "....ZZOHHHHHHHOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+  ".....ZZZZZZZZZZ",
+  "",
+  "",
+], NAP_W);
+
+// 들어올 때 품에 안고 오는 베개
+const PILLOW = [
+  ".OOOOOO.",
+  "OZzzzzZO",
+  "OZzzzzZO",
+  "OZZZZZZO",
+  ".OOOOOO.",
+];
 function composeOwner(layers) {
   const c = Array.from({ length: OH }, () => Array(OW).fill("."));
   layers.forEach(([part, x0, y0]) => part.forEach((row, dy) => [...row].forEach((ch, dx) => {
@@ -272,6 +299,7 @@ function composeOwner(layers) {
   })));
   return c.map((r) => r.join(""));
 }
+const PILLOW_W = PILLOW[0].length, PILLOW_H = PILLOW.length;
 const owner = {
   stand: composeOwner([[O_HEAD, 0, 0], [O_TORSO, 0, 11], [O_LEGS_STAND, 0, 19]]),
   walkA: composeOwner([[O_HEAD, 0, 0], [O_TORSO, 0, 11], [O_LEGS_A, 0, 19]]),
@@ -280,8 +308,8 @@ const owner = {
   wave: composeOwner([[O_HEAD, 0, 0], [O_TORSO_WAVE, 0, 11], [O_LEGS_STAND, 0, 19]]),
 };
 const ownerPalette = {
-  O: "#3a2a2a", H: "#4a3028", h: "#7a5443", S: "#fbdcc4", s: "#f4a09a", E: "#2a1c1c", W: "#ffffff",
-  T: "#f7b8c8", t: "#ec9bb0", K: "#2f3f63", B: "#7a4a3a", C: "#f39a3d", c: "#fff1d6",
+  O: "#3a2a2a", H: "#4a3028", Z: "#cfe0f2", z: "#eaf3fc", h: "#7a5443", S: "#fbdcc4", s: "#f4a09a", E: "#2a1c1c", W: "#ffffff",
+  T: "#f7b8c8", t: "#ec9bb0", K: "#2f3f63", B: "#7a4a3a", C: "#f39a3d", c: "#fff1d6", e: "#3a2a2a",
 };
 // 츄르 아이콘 (누르면 이윤이 츄르를 주러 온다)
 const churuIcon = ["......Oc", ".....OCc", "....OCCO", "...OCCO.", "..OCCO..", ".OCCO...", "OCCO....", "OOO....."];
@@ -365,6 +393,23 @@ export const OWNER_H = ${OH};
 export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = ${JSON.stringify(owner, null, 2)};
 export const OWNER_PALETTE: Record<string, string> = ${JSON.stringify(ownerPalette, null, 2)};
 export const CHURU_ICON: CatFrame = ${JSON.stringify(churuIcon, null, 2)};
+
+/** 낮잠 — 베개 베고 누운 이윤 (가로로 길어서 따로) */
+export const NAP_W = ${NAP_W};
+export const NAP_H = ${NAP_H};
+export const OWNER_NAP: CatFrame = ${JSON.stringify(O_NAP, null, 2)};
+export const PILLOW_W = ${PILLOW_W};
+export const PILLOW_H = ${PILLOW_H};
+export const PILLOW: CatFrame = ${JSON.stringify(PILLOW, null, 2)};
+export const NAP_ICON: CatFrame = ${JSON.stringify([
+  "..OOOO..",
+  ".OZzzZO.",
+  "OZzOHOzZO".slice(0, 8),
+  "OZzHSSHO",
+  "OZzHCCHO",
+  ".OZzzZO.",
+  "..OOOO..",
+], null, 2)};
 
 /** 낚싯대 장난감 — 놀아줄 때 이윤이 흔든다 */
 export const TOY_W = 16;

@@ -29,8 +29,8 @@ export function takePendingCatEvent(): CatEvent | null {
   }
 }
 
-/** 돌보기 버튼 → 이윤을 불러 밥·물을 채우거나, 츄르를 주거나, 낚싯대로 놀아준다 */
-export type CareKind = "food" | "water" | "churu" | "play";
+/** 돌보기 버튼 → 이윤을 불러 밥·물을 채우거나, 츄르를 주거나, 낚싯대로 놀아주거나, 같이 낮잠을 잔다 */
+export type CareKind = "food" | "water" | "churu" | "play" | "nap";
 
 export function careForCats(kind: CareKind) {
   if (typeof window === "undefined") return;

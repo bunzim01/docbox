@@ -356,7 +356,7 @@ export default function DocList({
       : (currentFolder?.name ?? "라이크웨이 자료실");
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-20">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
       <header
         className={`sticky top-0 z-10 border-b border-zinc-200 bg-cream/95 px-5 pb-3 backdrop-blur ${
           atRoot ? "pt-6" : "pt-3"
@@ -568,12 +568,12 @@ export default function DocList({
                 >
                   <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
                   <a
-                    href={viewUrl(doc.fileUrl, doc.file_type)}
+                    href={viewUrl(doc)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="min-w-0 flex-1 hover:underline"
                   >
-                    <span className="line-clamp-2 text-lg leading-snug sm:line-clamp-1">
+                    <span className="line-clamp-2 text-lg leading-snug [overflow-wrap:anywhere] sm:line-clamp-1">
                       {doc.is_favorite && <span className="text-gold">★ </span>}
                       {doc.title}
                     </span>
@@ -809,7 +809,7 @@ function TrashView({
             <li key={doc.id} className="flex items-center gap-2.5 px-5 py-4 sm:gap-3 sm:py-2">
               <FileIcon fileType={doc.file_type} className="h-10 w-8 shrink-0 sm:h-7 sm:w-[22px]" />
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 font-semibold leading-snug sm:line-clamp-1 sm:text-lg sm:font-normal">
+                <p className="line-clamp-2 font-semibold leading-snug [overflow-wrap:anywhere] sm:line-clamp-1 sm:text-lg sm:font-normal">
                   {doc.title}
                 </p>
                 <p className="mt-0.5 text-base text-zinc-400">
@@ -1107,13 +1107,13 @@ function DocRows({
               <p className="flex items-start gap-1 font-semibold leading-snug text-zinc-900 sm:items-center sm:text-lg sm:font-normal">
                 {doc.is_favorite && <span className="text-gold">★</span>}
                 {selecting ? (
-                  <span className="line-clamp-2 sm:line-clamp-1">{doc.title}</span>
+                  <span className="line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-1">{doc.title}</span>
                 ) : (
                   <a
-                    href={viewUrl(doc.fileUrl, doc.file_type)}
+                    href={viewUrl(doc)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="line-clamp-2 hover:underline sm:line-clamp-1"
+                    className="line-clamp-2 [overflow-wrap:anywhere] hover:underline sm:line-clamp-1"
                   >
                     {doc.title}
                   </a>

@@ -697,11 +697,11 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
     "..OHHOSSSSOHHO......",
     "..OHHOTTTTOHHO......",
     "..OHOTTTTTTOHO......",
-    "..OHSTTTTTTSHO......",
-    "...OSTTTTTTSO.......",
-    "....OTTTTTTO........",
-    "....OKKKKKKO........",
-    "...OKKKKKKKKO.......",
+    ".OOTTTTTTTTTTOO.....",
+    ".OTTOTTTTTTOTTO.....",
+    ".OSSOTTTTTTOSSO.....",
+    ".OSSOKKKKKKOSSO.....",
+    "..OOKKKKKKKKOO......",
     "...OOOOOOOOOO.......",
     ".....OSOOSO.........",
     ".....OSOOSO.........",
@@ -723,11 +723,11 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
     "..OHHOSSSSOHHO......",
     "..OHHOTTTTOHHO......",
     "..OHOTTTTTTOHO......",
-    "..OHSTTTTTTSHO......",
-    "...OSTTTTTTSO.......",
-    "....OTTTTTTO........",
-    "....OKKKKKKO........",
-    "...OKKKKKKKKO.......",
+    ".OOTTTTTTTTTTOO.....",
+    ".OTTOTTTTTTOTTO.....",
+    ".OSSOTTTTTTOSSO.....",
+    ".OSSOKKKKKKOSSO.....",
+    "..OOKKKKKKKKOO......",
     "...OOOOOOOOOO.......",
     "....OSO..OSO........",
     "...OSO....OSO.......",
@@ -750,11 +750,11 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
     "..OHHOSSSSOHHO......",
     "..OHHOTTTTOHHO......",
     "..OHOTTTTTTOHO......",
-    "..OHSTTTTTTSHO......",
-    "...OSTTTTTTSO.......",
-    "....OTTTTTTO........",
-    "....OKKKKKKO........",
-    "...OKKKKKKKKO.......",
+    ".OOTTTTTTTTTTOO.....",
+    ".OTTOTTTTTTOTTO.....",
+    ".OSSOTTTTTTOSSO.....",
+    ".OSSOKKKKKKOSSO.....",
+    "..OOKKKKKKKKOO......",
     "...OOOOSSOOOO.......",
     "......OSSO..........",
     "......OSSO..........",
@@ -778,14 +778,14 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
     "..OHHSSSsSSHHO......",
     "..OHHOSSSSOHHO......",
     "..OHHOTTTTOHHO......",
-    "..OHOTTTTTTOOOOO....",
-    "..OHSTTTTTTTTTSOCCCc",
-    "...OSTTTTTTOOOOOCCCc",
-    "....OTTTTTTO........",
-    "...OKKKKKKKKO.......",
-    "..OKKKKKKKKKKO......",
-    "..OBBOOOOOOBBO......",
-    "..OOOOOOOOOOOO......"
+    "..OHOTTTTTTOOOOOOO..",
+    ".OOTTTTTTTTTTTTSSCCc",
+    ".OTTOTTTTTTOOOOSSCCc",
+    ".OSSOTTTTTTO...OO...",
+    "..OKKKKKKKKKO.......",
+    ".OKKKKKKKKKKKO......",
+    ".OBBOOOOOOOBBO......",
+    ".OOOOOOOOOOOOO......"
   ],
   "wave": [
     ".....OOOOOO.........",
@@ -799,13 +799,13 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
     "..OHSsSSSSsSHO......",
     "..OHHSSSsSSHHO......",
     "..OHHOSSSSOHHO......",
-    "..OHHOTTTTOHHOSO....",
-    "..OHOTTTTTTOHOSO....",
-    "..OHSTTTTTTTTTO.....",
-    "...OSTTTTTTOOO......",
-    "....OTTTTTTO........",
-    "....OKKKKKKO........",
-    "...OKKKKKKKKO.......",
+    "..OHHOTTTTOHHO.SSO..",
+    "..OHOTTTTTTOHOOTTO..",
+    ".OOTTTTTTTTTTOTTO...",
+    ".OTTOTTTTTTOTTO.....",
+    ".OSSOTTTTTTOSO......",
+    ".OSSOKKKKKKOO.......",
+    "..OOKKKKKKKKO.......",
     "...OOOOOOOOOO.......",
     ".....OSOOSO.........",
     ".....OSOOSO.........",
@@ -817,6 +817,8 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
 export const OWNER_PALETTE: Record<string, string> = {
   "O": "#3a2a2a",
   "H": "#4a3028",
+  "Z": "#cfe0f2",
+  "z": "#eaf3fc",
   "h": "#7a5443",
   "S": "#fbdcc4",
   "s": "#f4a09a",
@@ -827,7 +829,8 @@ export const OWNER_PALETTE: Record<string, string> = {
   "K": "#2f3f63",
   "B": "#7a4a3a",
   "C": "#f39a3d",
-  "c": "#fff1d6"
+  "c": "#fff1d6",
+  "e": "#3a2a2a"
 };
 export const CHURU_ICON: CatFrame = [
   "......Oc",
@@ -838,6 +841,43 @@ export const CHURU_ICON: CatFrame = [
   ".OCCO...",
   "OCCO....",
   "OOO....."
+];
+
+/** 낮잠 — 베개 베고 누운 이윤 (가로로 길어서 따로) */
+export const NAP_W = 46;
+export const NAP_H = 14;
+export const OWNER_NAP: CatFrame = [
+  "..............................................",
+  "....ZZZZZZZZZZ................................",
+  "...ZzzzzzzzzzzZ...............................",
+  "...ZzOHHHHHHHHOZ..............................",
+  "...ZzOHHHHHHHHHOOOOOOOOOOOOOOOOOOOOOOOOOO.....",
+  "...ZzOHHSSSSSSHOTTTTTTTTTTTTKKKKKKKKSSSSSSO...",
+  "...ZzOHeSSSSSeHOTTTTTTTTTTTTKKKKKKKKSSSSSSSO..",
+  "...ZzOHSSSSSSSHOTTTTTTTTTTTTKKKKKKKKSSSSSSSO..",
+  "....ZOHHSSSSSHHOTTTTTTTTTTTTKKKKKKKKSSSSSSO...",
+  "....ZZOHHHHHHHOOOOOOOOOOOOOOOOOOOOOOOOOOO.....",
+  ".....ZZZZZZZZZZ...............................",
+  "..............................................",
+  ".............................................."
+];
+export const PILLOW_W = 8;
+export const PILLOW_H = 5;
+export const PILLOW: CatFrame = [
+  ".OOOOOO.",
+  "OZzzzzZO",
+  "OZzzzzZO",
+  "OZZZZZZO",
+  ".OOOOOO."
+];
+export const NAP_ICON: CatFrame = [
+  "..OOOO..",
+  ".OZzzZO.",
+  "OZzOHOzZ",
+  "OZzHSSHO",
+  "OZzHCCHO",
+  ".OZzzZO.",
+  "..OOOO.."
 ];
 
 /** 낚싯대 장난감 — 놀아줄 때 이윤이 흔든다 */
