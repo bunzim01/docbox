@@ -2,19 +2,49 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { takePendingCatEvent, type CatEvent } from "@/lib/cat-events";
-import { CAT_H, CAT_NAMES, CAT_W, FRAMES, PALETTES, type CatKind, type FrameName } from "@/lib/cat-sprites";
+import {
+  BOWLS,
+  BOWL_H,
+  BOWL_PALETTES,
+  BOWL_W,
+  CAT_H,
+  CAT_NAMES,
+  CAT_W,
+  CHURU_ICON,
+  FRAMES,
+  OWNER_FRAMES,
+  OWNER_H,
+  OWNER_NAME,
+  OWNER_PALETTE,
+  OWNER_W,
+  PALETTES,
+  type BowlKind,
+  type CatKind,
+  type FrameName,
+  type OwnerFrame,
+} from "@/lib/cat-sprites";
 
 /**
- * 화면 맨 아래를 돌아다니는 픽셀 고양이 두 마리 — 사용자의 실제 고양이 태리(크림색)와 제리(회색 포인트).
- * 순전히 재미용 — 버튼보다 뒤에 깔리고, 눌러도 다른 동작을 방해하지 않는다.
+ * 화면 맨 아래의 작은 세상 — 사용자의 실제 고양이 태리(크림색·통통)와 제리(회색 포인트·얄쌍),
+ * 밥그릇·물그릇, 그리고 츄르를 주러 오는 주인 이윤.
+ * 순전히 재미용이라 앱 기능을 방해하지 않는다: 빈 자리는 터치가 통과하고, 버튼보다 뒤에 깔린다.
  */
 
-const PX = 2; // 도트 한 칸 크기 (가로 30칸 × 2px = 60px — 예전과 같은 크기에 더 촘촘한 그림)
+const PX = 2; // 도트 한 칸 크기
 const W = CAT_W * PX;
 const H = CAT_H * PX;
+const OW = OWNER_W * PX;
+const OH = OWNER_H * PX;
+const BW = BOWL_W * PX;
+const BH = BOWL_H * PX;
 const TICK = 130; // ms — 일부러 뚝뚝 끊기는 도트 느낌
+const FULL = 3; // 그릇이 가득 찬 정도
+const STORE = "docbox-bowls";
 
-type State = "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump";
+type State =
+  | "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump" | "eat";
+type Arrive = "watch" | "food" | "water" | "churu";
+
 type Cat = {
   kind: CatKind;
   x: number;
@@ -23,14 +53,33 @@ type Cat = {
   state: State;
   ticks: number; // 지금 상태가 끝날 때까지 남은 틱
   frame: number;
-  heart: number; // 하트 표시 남은 틱
+  heart: number; // 이름표·하트 표시 남은 틱
   alert: number; // 깜짝(!) 표시 남은 틱
+  hunger: number;
+  thirst: number;
   then?: State; // 점프가 끝난 뒤 이어질 상태
-  goal?: number; // 달려갈 목적지 (도착하면 앉아서 구경)
+  goal?: number; // 달려갈 목적지
   faceAtGoal?: 1 | -1;
+  arrive?: Arrive; // 도착해서 할 일
+  eating?: Arrive; // 지금 먹고 있는 것
   hops?: number; // 제자리에서 더 뛸 횟수 (기쁠 때)
-  inPlace?: boolean; // 제자리 점프
+  inPlace?: boolean;
   watching?: boolean; // 올라온 파일 구경 중 (이때는 장난을 걸지 않는다)
+};
+
+type Owner = {
+  state: "away" | "enter" | "give" | "wave" | "leave";
+  x: number;
+  ticks: number;
+  frame: number;
+  heart: number;
+};
+
+type World = {
+  cats: Cat[];
+  owner: Owner;
+  bowls: Record<BowlKind, number>;
+  nextVisit: number; // 이윤이 알아서 들르기까지 남은 틱
 };
 
 const JUMP_ARC = [5, 9, 11, 9, 5, 0];
@@ -40,7 +89,37 @@ const isNight = () => {
   return h >= 22 || h < 7;
 };
 
-function next(cat: Cat) {
+/** 그릇·이윤이 서는 자리 (화면 너비에 맞춰) */
+function places(width: number) {
+  const food = Math.round(width * 0.3);
+  return { food, water: food + BW + 8, owner: Math.round(Math.min(width * 0.62, width - OW - 84)) };
+}
+
+/** 그릇 앞에 서는 자리 — 태리는 왼쪽에서(오른쪽을 보고), 제리는 오른쪽에서(왼쪽을 보고) 마주 먹는다 */
+function spotAt(cat: Cat, bowlX: number): { x: number; face: 1 | -1 } {
+  return cat.kind === "taeri" ? { x: bowlX - 36, face: 1 } : { x: bowlX - 2, face: -1 };
+}
+
+function saveBowls(bowls: World["bowls"]) {
+  try {
+    localStorage.setItem(STORE, JSON.stringify(bowls));
+  } catch {
+    // 저장이 막혀 있으면 다음에 열 때 가득 찬 상태로 시작할 뿐이다
+  }
+}
+
+function goTo(cat: Cat, x: number, face: 1 | -1, arrive: Arrive, run = false) {
+  cat.goal = x;
+  cat.faceAtGoal = face;
+  cat.arrive = arrive;
+  cat.state = run ? "run" : "walk";
+  cat.frame = 0;
+  cat.ticks = 400;
+  cat.watching = false;
+  cat.y = 0;
+}
+
+function next(cat: Cat, world: World, width: number) {
   // 자다 깨면 기지개부터 켠다
   if (cat.state === "sleep") {
     cat.state = "stretch";
@@ -48,10 +127,25 @@ function next(cat: Cat) {
     return;
   }
 
-  const r = Math.random();
-  const sleepy = isNight() ? 0.5 : 0.13;
   cat.frame = 0;
   cat.watching = false;
+  cat.eating = undefined;
+
+  // 배고프거나 목마르면 그릇으로 간다 (비어 있으면 포기)
+  const spots = places(width);
+  if (cat.hunger > 320 && world.bowls.food > 0) {
+    const s = spotAt(cat, spots.food);
+    goTo(cat, s.x, s.face, "food");
+    return;
+  }
+  if (cat.thirst > 380 && world.bowls.water > 0) {
+    const s = spotAt(cat, spots.water);
+    goTo(cat, s.x, s.face, "water");
+    return;
+  }
+
+  const r = Math.random();
+  const sleepy = isNight() ? 0.5 : 0.13;
   if (r < sleepy) {
     cat.state = "sleep";
     cat.ticks = Math.round(rand(90, 220));
@@ -82,22 +176,27 @@ function jump(cat: Cat, then: State = "sit", inPlace = false) {
   cat.inPlace = inPlace;
 }
 
+/** 이윤이 츄르를 들고 들어온다 */
+function callOwner(world: World, width: number) {
+  if (world.owner.state !== "away") return;
+  world.owner = { state: "enter", x: width + 6, ticks: 0, frame: 0, heart: 0 };
+  world.nextVisit = Math.round(rand(1900, 3700)); // 다음에 알아서 들르는 건 4~8분 뒤
+}
+
 /** 앱에서 일어난 일에 반응한다 */
-function react(cats: Cat[], type: CatEvent, width: number) {
+function react(world: World, type: CatEvent, width: number) {
   const mid = width / 2;
-  cats.forEach((cat, i) => {
+  world.cats.forEach((cat, i) => {
     cat.y = 0;
+    cat.eating = undefined;
     if (type === "upload") {
       // 뭐가 올라왔나? 가운데로 달려와 마주 보고 앉아 꼬리를 흔든다
       cat.alert = 7;
-      cat.goal = i === 0 ? mid - W - 6 : mid + 6;
-      cat.faceAtGoal = i === 0 ? 1 : -1;
-      cat.state = "run";
-      cat.frame = 0;
-      cat.ticks = 200;
+      goTo(cat, i === 0 ? mid - W - 6 : mid + 6, i === 0 ? 1 : -1, "watch", true);
     } else {
       // 보냈다! 제자리에서 폴짝폴짝 + 하트
       cat.goal = undefined;
+      cat.arrive = undefined;
       cat.watching = false;
       cat.heart = 26;
       cat.hops = 2;
@@ -106,24 +205,87 @@ function react(cats: Cat[], type: CatEvent, width: number) {
   });
 }
 
-function step(cats: Cat[], width: number) {
+function step(world: World, width: number) {
   const max = Math.max(0, width - W);
+  const spots = places(width);
+  const { cats, owner } = world;
 
+  /* ----- 이윤 ----- */
+  if (owner.heart > 0) owner.heart -= 1;
+  if (owner.state === "away") {
+    world.nextVisit -= 1;
+    if (world.nextVisit <= 0 && !isNight()) callOwner(world, width);
+  } else if (owner.state === "enter") {
+    owner.x -= 3.2;
+    owner.frame += 1;
+    if (owner.x <= spots.owner) {
+      owner.x = spots.owner;
+      owner.state = "give";
+      owner.ticks = 75;
+      // 츄르다! 둘 다 달려온다 (자고 있어도 벌떡)
+      cats.forEach((cat, i) => {
+        cat.alert = 8;
+        cat.eating = undefined;
+        goTo(cat, owner.x - W + 8 - i * 34, 1, "churu", true);
+      });
+    }
+  } else if (owner.state === "give") {
+    owner.ticks -= 1;
+    if (owner.ticks <= 0) {
+      owner.state = "wave";
+      owner.ticks = 14;
+      cats.forEach((cat) => {
+        if (cat.eating === "churu") {
+          cat.eating = undefined;
+          cat.hunger = 0;
+          cat.heart = 18;
+          jump(cat, "wag", true);
+        }
+      });
+    }
+  } else if (owner.state === "wave") {
+    owner.ticks -= 1;
+    owner.frame += 1;
+    if (owner.ticks <= 0) owner.state = "leave";
+  } else if (owner.state === "leave") {
+    owner.x += 3.2;
+    owner.frame += 1;
+    if (owner.x > width + 10) owner.state = "away";
+  }
+
+  /* ----- 고양이 ----- */
   for (const cat of cats) {
     if (cat.heart > 0) cat.heart -= 1;
     if (cat.alert > 0) cat.alert -= 1;
+    cat.hunger += 1;
+    cat.thirst += 1;
 
     if (cat.state === "walk" || cat.state === "run") {
       if (cat.goal !== undefined) {
-        // 목적지가 있으면 그쪽으로 달려가고, 도착하면 앉아서 구경한다
         if (Math.abs(cat.x - cat.goal) <= 7) {
-          cat.x = cat.goal;
+          // 도착
+          cat.x = Math.max(0, Math.min(max, cat.goal));
           cat.dir = cat.faceAtGoal ?? cat.dir;
           cat.goal = undefined;
-          cat.watching = true;
-          cat.state = "wag";
-          cat.ticks = Math.round(rand(40, 55));
           cat.frame = 0;
+          const what = cat.arrive;
+          cat.arrive = undefined;
+          if (what === "watch") {
+            cat.watching = true;
+            cat.state = "wag";
+            cat.ticks = Math.round(rand(40, 55));
+          } else if (what === "churu" && owner.state === "give") {
+            cat.state = "eat";
+            cat.eating = "churu";
+            cat.ticks = 400; // 이윤이 일어날 때까지
+          } else if ((what === "food" || what === "water") && world.bowls[what] > 0) {
+            cat.state = "eat";
+            cat.eating = what;
+            cat.ticks = Math.round(rand(34, 48));
+          } else {
+            cat.state = "sit";
+            cat.ticks = 12;
+          }
           continue;
         }
         cat.dir = cat.goal > cat.x ? 1 : -1;
@@ -134,17 +296,17 @@ function step(cats: Cat[], width: number) {
       cat.y = JUMP_ARC[Math.min(cat.frame, JUMP_ARC.length - 1)];
       if (!cat.inPlace) cat.x += cat.dir * 3.5;
       cat.frame += 1;
-    } else if (cat.state === "wag" || cat.state === "groom") {
+    } else if (cat.state === "wag" || cat.state === "groom" || cat.state === "eat") {
       cat.frame += 1;
     }
 
     // 화면 끝에서 돌아선다
     if (cat.x <= 0) {
       cat.x = 0;
-      cat.dir = 1;
+      if (cat.goal === undefined) cat.dir = 1;
     } else if (cat.x >= max) {
       cat.x = max;
-      cat.dir = -1;
+      if (cat.goal === undefined) cat.dir = -1;
     }
 
     cat.ticks -= 1;
@@ -160,17 +322,30 @@ function step(cats: Cat[], width: number) {
         cat.ticks = cat.state === "run" ? Math.round(rand(14, 26)) : Math.round(rand(8, 20));
         cat.frame = 0;
         cat.then = undefined;
+      } else if (cat.state === "eat" && (cat.eating === "food" || cat.eating === "water")) {
+        // 다 먹었다 — 그릇이 한 칸 줄고, 만족해서 그루밍
+        const what = cat.eating;
+        world.bowls[what] = Math.max(0, world.bowls[what] - 1);
+        saveBowls(world.bowls);
+        if (what === "food") cat.hunger = 0;
+        else cat.thirst = 0;
+        cat.eating = undefined;
+        cat.state = "groom";
+        cat.ticks = Math.round(rand(20, 34));
+        cat.frame = 0;
       } else {
-        next(cat);
+        next(cat, world, width);
       }
     }
   }
 
-  // 둘이 만났을 때
+  /* ----- 둘이 만났을 때 ----- */
   const [a, b] = cats;
   const dist = Math.abs(a.x - b.x);
   const awake = (c: Cat) =>
     c.goal === undefined && !c.watching && ["walk", "sit", "wag", "groom"].includes(c.state);
+
+  if (owner.state !== "away") return; // 이윤이 와 있을 땐 장난 금지
 
   if (awake(a) && awake(b) && dist < W * 1.3 && Math.random() < 0.05) {
     // 장난: 한 마리가 덮치고, 다른 한 마리는 놀라 도망 → 쫓아간다
@@ -186,12 +361,10 @@ function step(cats: Cat[], width: number) {
     const other = sleeper === a ? b : a;
     if (sleeper && awake(other)) {
       if (Math.random() < 0.65) {
-        // 옆에 누워 같이 잔다
-        other.state = "sleep";
+        other.state = "sleep"; // 옆에 누워 같이 잔다
         other.ticks = Math.round(rand(80, 180));
       } else {
-        // 툭 건드려 깨운다
-        other.dir = sleeper.x >= other.x ? 1 : -1;
+        other.dir = sleeper.x >= other.x ? 1 : -1; // 툭 건드려 깨운다
         jump(other, "sit");
         sleeper.alert = 6;
         jump(sleeper, "sit");
@@ -201,11 +374,11 @@ function step(cats: Cat[], width: number) {
 }
 
 /** 같은 색 도트를 한 줄기(path)로 묶어 그릴 것을 줄인다 */
-function spritePaths(kind: CatKind, rows: string[]) {
+function toPaths(rows: string[], palette: Record<string, string>): [string, string][] {
   const byColor = new Map<string, string>();
   rows.forEach((row, y) => {
     [...row].forEach((ch, x) => {
-      const color = PALETTES[kind][ch];
+      const color = palette[ch];
       if (!color) return;
       byColor.set(color, `${byColor.get(color) ?? ""}M${x} ${y}h1v1h-1z`);
     });
@@ -227,6 +400,8 @@ function frameOf(cat: Cat): FrameName {
       return Math.floor(cat.frame / 2) % 2 === 0 ? "sit" : "sitWag";
     case "groom":
       return Math.floor(cat.frame / 3) % 2 === 0 ? "groomA" : "groomB";
+    case "eat":
+      return Math.floor(cat.frame / 3) % 2 === 0 ? "eatA" : "eatB";
     default: {
       const speed = cat.state === "run" ? 1 : 2;
       return Math.floor(cat.frame / speed) % 2 === 0 ? "walkA" : "walkB";
@@ -234,20 +409,63 @@ function frameOf(cat: Cat): FrameName {
   }
 }
 
+function ownerFrame(owner: Owner): OwnerFrame {
+  if (owner.state === "give") return "give";
+  if (owner.state === "wave") return Math.floor(owner.frame / 3) % 2 === 0 ? "wave" : "stand";
+  return Math.floor(owner.frame / 2) % 2 === 0 ? "walkA" : "walkB";
+}
+
+function Sprite({
+  paths,
+  w,
+  h,
+  width,
+  height,
+  flip,
+}: {
+  paths: [string, string][];
+  w: number;
+  h: number;
+  width: number;
+  height: number;
+  flip?: boolean;
+}) {
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      width={width}
+      height={height}
+      shapeRendering="crispEdges"
+      style={{ transform: flip ? "scaleX(-1)" : undefined, display: "block" }}
+    >
+      {paths.map(([color, d]) => (
+        <path key={color} d={d} fill={color} />
+      ))}
+    </svg>
+  );
+}
+
 export default function Cats({ hidden }: { hidden?: boolean }) {
   const boxRef = useRef<HTMLDivElement>(null);
-  const catsRef = useRef<Cat[] | null>(null);
+  const worldRef = useRef<World | null>(null);
   const stillRef = useRef(false);
   const [, setVersion] = useState(0);
+  const redraw = () => setVersion((v) => v + 1);
 
-  const sprites = useMemo(() => {
-    const out = {} as Record<CatKind, Record<string, [string, string][]>>;
+  const art = useMemo(() => {
+    const cats = {} as Record<CatKind, Record<string, [string, string][]>>;
     for (const kind of ["taeri", "jeri"] as CatKind[]) {
-      out[kind] = {};
+      cats[kind] = {};
       // 고양이마다 그림이 다르다 (태리는 둥글고 통통, 제리는 갸름하고 날씬)
-      for (const [name, rows] of Object.entries(FRAMES[kind])) out[kind][name] = spritePaths(kind, rows);
+      for (const [name, rows] of Object.entries(FRAMES[kind])) cats[kind][name] = toPaths(rows, PALETTES[kind]);
     }
-    return out;
+    const bowls = {} as Record<BowlKind, [string, string][][]>;
+    for (const kind of ["food", "water"] as BowlKind[]) {
+      bowls[kind] = BOWLS[kind].map((rows) => toPaths(rows, BOWL_PALETTES[kind]));
+    }
+    const owner = {} as Record<string, [string, string][]>;
+    for (const [name, rows] of Object.entries(OWNER_FRAMES)) owner[name] = toPaths(rows, OWNER_PALETTE);
+    return { cats, bowls, owner, churu: toPaths(CHURU_ICON, OWNER_PALETTE) };
   }, []);
 
   useEffect(() => {
@@ -255,11 +473,34 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     stillRef.current = still;
 
-    catsRef.current = [
-      { kind: "taeri", x: width * 0.22, y: 0, dir: 1, state: still ? "sit" : "walk", ticks: 40, frame: 0, heart: 0, alert: 0 },
-      { kind: "jeri", x: width * 0.62, y: 0, dir: -1, state: still ? "sleep" : "sit", ticks: 25, frame: 0, heart: 0, alert: 0 },
-    ];
-    setVersion((v) => v + 1);
+    let bowls: World["bowls"] = { food: FULL, water: FULL };
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORE) ?? "null");
+      if (saved && typeof saved.food === "number" && typeof saved.water === "number") {
+        bowls = {
+          food: Math.max(0, Math.min(FULL, saved.food)),
+          water: Math.max(0, Math.min(FULL, saved.water)),
+        };
+      }
+    } catch {
+      // 저장된 값이 없거나 읽을 수 없으면 가득 찬 그릇으로 시작
+    }
+
+    const cat = (kind: CatKind, x: number, dir: 1 | -1, state: State, ticks: number): Cat => ({
+      kind, x, y: 0, dir, state, ticks, frame: 0, heart: 0, alert: 0,
+      hunger: Math.round(rand(120, 300)),
+      thirst: Math.round(rand(60, 260)),
+    });
+    worldRef.current = {
+      cats: [
+        cat("taeri", width * 0.12, 1, still ? "sit" : "walk", 40),
+        cat("jeri", width * 0.68, -1, still ? "sleep" : "sit", 25),
+      ],
+      owner: { state: "away", x: width + 6, ticks: 0, frame: 0, heart: 0 },
+      bowls,
+      nextVisit: Math.round(rand(700, 1500)), // 처음엔 1.5~3분쯤 뒤에 한 번 들른다
+    };
+    redraw();
 
     // 움직임을 줄여 달라고 설정한 기기에서는 가만히 있는다
     if (still) return;
@@ -267,16 +508,16 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     // 앱에서 일어난 일(올리기·보내기)에 반응
     const onNews = (e: Event) => {
       const type = (e as CustomEvent<CatEvent>).detail;
-      if (catsRef.current) react(catsRef.current, type, boxRef.current?.clientWidth ?? 360);
+      if (worldRef.current) react(worldRef.current, type, boxRef.current?.clientWidth ?? 360);
     };
     window.addEventListener("docbox:cat", onNews);
     const pendingNews = takePendingCatEvent();
-    if (pendingNews) react(catsRef.current, pendingNews, width);
+    if (pendingNews) react(worldRef.current, pendingNews, width);
 
     const timer = setInterval(() => {
-      if (document.hidden || !catsRef.current) return;
-      step(catsRef.current, boxRef.current?.clientWidth ?? 360);
-      setVersion((v) => v + 1);
+      if (document.hidden || !worldRef.current) return;
+      step(worldRef.current, boxRef.current?.clientWidth ?? 360);
+      redraw();
     }, TICK);
     return () => {
       clearInterval(timer);
@@ -285,63 +526,140 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
   }, []);
 
   if (hidden) return null;
-  const cats = catsRef.current ?? [];
+  const world = worldRef.current;
+  const width = boxRef.current?.clientWidth ?? 360;
+  const spots = places(width);
+
+  /** 그릇을 누르면 가득 채운다 — 배고픈 애들이 달려온다 */
+  function refill(kind: BowlKind) {
+    if (!world) return;
+    world.bowls[kind] = FULL;
+    saveBowls(world.bowls);
+    if (!stillRef.current && world.owner.state === "away") {
+      for (const cat of world.cats) {
+        const need = kind === "food" ? cat.hunger : cat.thirst;
+        if (need > 90 && cat.goal === undefined && cat.state !== "eat") {
+          cat.alert = 6;
+          const s = spotAt(cat, spots[kind]);
+          goTo(cat, s.x, s.face, kind, true);
+        }
+      }
+    }
+    redraw();
+  }
 
   return (
     <div
       ref={boxRef}
       aria-hidden="true"
       className="pointer-events-none fixed bottom-0 left-0 right-0 z-10 mx-auto w-full max-w-4xl"
-      style={{ height: H + 22 }}
+      style={{ height: OH + 22 }}
     >
-      {cats.map((cat) => (
-        <button
-          key={cat.kind}
-          type="button"
-          tabIndex={-1}
-          onClick={() => {
-            // 쓰다듬으면 깜짝 놀라 폴짝 + 하트
-            cat.heart = 12;
-            if (stillRef.current) {
-              // 움직임을 줄인 기기: 폴짝 뛰지 않고 하트만 잠깐 보여준다
-              if (cat.state === "sleep") cat.state = "sit";
-              setTimeout(() => {
-                cat.heart = 0;
-                setVersion((v) => v + 1);
-              }, 1500);
-            } else if (cat.state !== "jump") {
-              jump(cat, "sit");
-            }
-            setVersion((v) => v + 1);
-          }}
-          className="pointer-events-auto absolute cursor-pointer select-none bg-transparent p-0"
-          style={{ left: cat.x, bottom: cat.y, width: W, height: H }}
-        >
-          <svg
-            viewBox={`0 0 ${CAT_W} ${CAT_H}`}
-            width={W}
-            height={H}
-            shapeRendering="crispEdges"
-            style={{ transform: cat.dir === -1 ? "scaleX(-1)" : undefined, display: "block" }}
-          >
-            {sprites[cat.kind][frameOf(cat)].map(([color, d]) => (
-              <path key={color} d={d} fill={color} />
-            ))}
-          </svg>
+      {world && (
+        <>
+          {/* 이윤 — 오른쪽에서 걸어 들어와 왼쪽을 보고 츄르를 내민다 */}
+          {world.owner.state !== "away" && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => {
+                world.owner.heart = 14;
+                redraw();
+              }}
+              className="pointer-events-auto absolute bottom-0 cursor-pointer select-none bg-transparent p-0"
+              style={{ left: world.owner.x, width: OW, height: OH }}
+            >
+              <Sprite
+                paths={art.owner[ownerFrame(world.owner)]}
+                w={OWNER_W}
+                h={OWNER_H}
+                width={OW}
+                height={OH}
+                flip={world.owner.state !== "leave"}
+              />
+              {world.owner.heart > 0 && (
+                <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-ink">
+                  {OWNER_NAME} <span className="text-red-500">♥</span>
+                </span>
+              )}
+            </button>
+          )}
 
-          {cat.state === "sleep" && (
-            <span className="cat-zzz absolute -top-3 right-1 text-xs font-bold text-zinc-400">z</span>
+          {world.cats.map((cat) => (
+            <button
+              key={cat.kind}
+              type="button"
+              tabIndex={-1}
+              onClick={() => {
+                // 쓰다듬으면 이름표 + 하트, 깜짝 놀라 폴짝
+                cat.heart = 12;
+                if (stillRef.current) {
+                  if (cat.state === "sleep") cat.state = "sit";
+                  setTimeout(() => {
+                    cat.heart = 0;
+                    redraw();
+                  }, 1500);
+                } else if (cat.state !== "jump" && cat.state !== "eat") {
+                  jump(cat, "sit");
+                }
+                redraw();
+              }}
+              className="pointer-events-auto absolute cursor-pointer select-none bg-transparent p-0"
+              style={{ left: cat.x, bottom: cat.y, width: W, height: H }}
+            >
+              <Sprite
+                paths={art.cats[cat.kind][frameOf(cat)]}
+                w={CAT_W}
+                h={CAT_H}
+                width={W}
+                height={H}
+                flip={cat.dir === -1}
+              />
+              {cat.state === "sleep" && (
+                <span className="cat-zzz absolute -top-3 right-1 text-xs font-bold text-zinc-400">z</span>
+              )}
+              {cat.alert > 0 && (
+                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-base font-black text-gold">!</span>
+              )}
+              {cat.heart > 0 && (
+                <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-ink">
+                  {CAT_NAMES[cat.kind]} <span className="text-red-500">♥</span>
+                </span>
+              )}
+            </button>
+          ))}
+
+          {/* 밥그릇·물그릇 — 고양이 앞에 놓인다. 누르면 가득 채워진다 */}
+          {(["food", "water"] as BowlKind[]).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              tabIndex={-1}
+              onClick={() => refill(kind)}
+              className="pointer-events-auto absolute bottom-0 cursor-pointer select-none bg-transparent p-0"
+              style={{ left: spots[kind], width: BW, height: BH + 8, paddingTop: 8 }}
+            >
+              <Sprite paths={art.bowls[kind][world.bowls[kind]]} w={BOWL_W} h={BOWL_H} width={BW} height={BH} />
+            </button>
+          ))}
+
+          {/* 츄르 — 누르면 이윤이 주러 온다 */}
+          {world.owner.state === "away" && !stillRef.current && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => {
+                callOwner(world, width);
+                redraw();
+              }}
+              className="pointer-events-auto absolute bottom-0 cursor-pointer select-none bg-transparent p-1"
+              style={{ left: spots.water + BW + 10, width: 24, height: 24 }}
+            >
+              <Sprite paths={art.churu} w={8} h={8} width={16} height={16} />
+            </button>
           )}
-          {cat.alert > 0 && (
-            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-base font-black text-gold">!</span>
-          )}
-          {cat.heart > 0 && (
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-ink">
-              {CAT_NAMES[cat.kind]} <span className="text-red-500">♥</span>
-            </span>
-          )}
-        </button>
-      ))}
+        </>
+      )}
     </div>
   );
 }

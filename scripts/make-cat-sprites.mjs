@@ -147,6 +147,8 @@ const frames = {
     groomB: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [PAW_UP, 22, 9], [T_HEAD_LICK, 12, 2]),
     stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [T_HEAD_CLOSED, 17, 5]),
     sleep: compose([T_SLEEP, 0, 7], [T_HEAD_CLOSED, 15, 7]),
+    eatA: compose([TAIL_UP, 0, 1], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD_CLOSED, 17, 7]),
+    eatB: compose([TAIL_MID, 0, 4], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD_LICK, 17, 8]),
     jump: compose([TAIL_BACK, 0, 5], [T_BODY, 3, 3], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [T_HEAD, 17, -1]),
   },
   jeri: {
@@ -158,6 +160,8 @@ const frames = {
     groomB: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [PAW_UP, 21, 9], [J_HEAD_LICK, 12, 1]),
     stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [J_HEAD_CLOSED, 18, 4]),
     sleep: compose([J_SLEEP, 0, 9], [J_HEAD_CLOSED, 15, 7]),
+    eatA: compose([TAIL_UP, 0, 3], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD_CLOSED, 19, 6]),
+    eatB: compose([TAIL_MID, 0, 6], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD_LICK, 19, 7]),
     jump: compose([TAIL_BACK, 0, 6], [J_BODY, 3, 5], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [J_HEAD, 19, -1]),
   },
 };
@@ -170,6 +174,104 @@ const palettes = {
   jeri: { O: "#5a4f57", B: "#ecdfd2", G: "#9d9199", H: "#f8f0e6", S: "#8a7e87", P: "#93878f", M: "#d9cdc6", W: "#fffdf8", F: "#d5c9c8",
           E: "#5fb0ea", K: "#1d3b55", L: "#ffffff", C: "#463c43", N: "#b08a8c", I: "#c9a9ad", T: "#ec8fa0", Y: "#e3d4c6" },
 };
+
+/* ---------- 밥그릇 · 물그릇 (12x6칸, 채워진 정도 0~3) ---------- */
+const bowl = (top0, top1, fill1, fill2) => [top0, top1, "RRRRRRRRRRRR", `R${fill1}R`, `.R${fill2}R.`, "..RRRRRRRR.."];
+const bowls = {
+  food: [
+    bowl("............", "............", "DDDDDDDDDD", "DDDDDDDD"),
+    bowl("............", "....KKKK....", "DDDDDDDDDD", "DDDDDDDD"),
+    bowl("............", "..KKKKKKKK..", "DDDDDDDDDD", "DDDDDDDD"),
+    bowl("....KKKK....", "..KJKKKJKK..", "DDDDDDDDDD", "DDDDDDDD"),
+  ],
+  water: [
+    bowl("............", "............", "GGGGGGGGGG", "GGGGGGGG"),
+    bowl("............", "............", "GGGGGGGGGG", "GWWWWWWG"),
+    bowl("............", "............", "GGGGGGGGGG", "WWWWWWWW"),
+    bowl("............", "............", "WWLWWWWWWW", "WWWWWWWW"),
+  ],
+};
+const bowlPalettes = {
+  // 밥그릇: 테라코타 그릇 + 갈색 사료
+  food: { R: "#b96a45", D: "#e08f63", K: "#8a5a2b", J: "#a9743a" },
+  // 물그릇: 유리처럼 비치는 하늘색 그릇 + 물
+  water: { R: "#6f9cc4", G: "#dcebf7", W: "#8cc8f2", L: "#ffffff" },
+};
+
+/* ---------- 주인 이윤 (20x24칸) — 긴 머리, 분홍 니트, 남색 치마. 오른쪽을 보는 기준 ---------- */
+// 글자: O 외곽선  H 머리  h 머리 윤기  S 피부  s 볼터치·입  E 눈  W 눈 반짝임  T 윗옷  t 윗옷 그늘  K 치마  B 신발
+//       C 츄르 봉지  c 츄르 끝(내용물)
+const O_HEAD = [
+  ".....OOOOOO.....",
+  "....OHHhhHHO....",
+  "...OHHhHHHHHO...",
+  "...OHHHHHHHHO...",
+  "..OHHHHHHHHHHO..",
+  "..OHHSSHSSSHHO..",
+  "..OHSSSSSSSSHO..",
+  "..OHSEWSSEWSHO..",
+  "..OHSsSSSSsSHO..",
+  "..OHHSSSsSSHHO..",
+  "..OHHOSSSSOHHO..",
+];
+const O_TORSO = [
+  "..OHHOTTTTOHHO..",
+  "..OHOTTTTTTOHO..",
+  "..OHSTTTTTTSHO..",
+  "...OSTTTTTTSO...",
+  "....OTTTTTTO....",
+  "....OKKKKKKO....",
+  "...OKKKKKKKKO...",
+  "...OOOOOOOOOO...",
+];
+const O_LEGS_STAND = [".....OSOOSO.....", ".....OSOOSO.....", ".....OSOOSO.....", "....OBBOOBBO....", "....OOOOOOOO...."];
+const O_LEGS_A = ["....OSO..OSO....", "...OSO....OSO...", "...OSO....OSO...", "..OBBO....OBBO..", "..OOOO....OOOO.."];
+const O_LEGS_B = ["......OSSO......", "......OSSO......", "......OSSO......", ".....OBBBBO.....", ".....OOOOOO....."];
+// 쪼그려 앉아 츄르를 내민다 (팔과 츄르가 오른쪽으로 뻗는다)
+const O_TORSO_GIVE = [
+  "..OHHOTTTTOHHO......",
+  "..OHOTTTTTTOOOOO....",
+  "..OHSTTTTTTTTTSOCCCc",
+  "...OSTTTTTTOOOOOCCCc",
+  "....OTTTTTTO........",
+  "...OKKKKKKKKO.......",
+  "..OKKKKKKKKKKO......",
+  "..OBBOOOOOOBBO......",
+  "..OOOOOOOOOOOO......",
+];
+// 손 흔들기 (한쪽 팔을 든다)
+const O_TORSO_WAVE = [
+  "..OHHOTTTTOHHOSO",
+  "..OHOTTTTTTOHOSO",
+  "..OHSTTTTTTTTTO.",
+  "...OSTTTTTTOOO..",
+  "....OTTTTTTO....",
+  "....OKKKKKKO....",
+  "...OKKKKKKKKO...",
+  "...OOOOOOOOOO...",
+];
+const OW = 20, OH = 24;
+function composeOwner(layers) {
+  const c = Array.from({ length: OH }, () => Array(OW).fill("."));
+  layers.forEach(([part, x0, y0]) => part.forEach((row, dy) => [...row].forEach((ch, dx) => {
+    const x = x0 + dx, y = y0 + dy;
+    if (ch !== "." && x >= 0 && x < OW && y >= 0 && y < OH) c[y][x] = ch;
+  })));
+  return c.map((r) => r.join(""));
+}
+const owner = {
+  stand: composeOwner([[O_HEAD, 0, 0], [O_TORSO, 0, 11], [O_LEGS_STAND, 0, 19]]),
+  walkA: composeOwner([[O_HEAD, 0, 0], [O_TORSO, 0, 11], [O_LEGS_A, 0, 19]]),
+  walkB: composeOwner([[O_HEAD, 0, 1], [O_TORSO, 0, 12], [O_LEGS_B, 0, 19]]),
+  give: composeOwner([[O_HEAD, 0, 4], [O_TORSO_GIVE, 0, 15]]),
+  wave: composeOwner([[O_HEAD, 0, 0], [O_TORSO_WAVE, 0, 11], [O_LEGS_STAND, 0, 19]]),
+};
+const ownerPalette = {
+  O: "#3a2a2a", H: "#4a3028", h: "#7a5443", S: "#fbdcc4", s: "#f4a09a", E: "#2a1c1c", W: "#ffffff",
+  T: "#f7b8c8", t: "#ec9bb0", K: "#2f3f63", B: "#7a4a3a", C: "#f39a3d", c: "#fff1d6",
+};
+// 츄르 아이콘 (누르면 이윤이 츄르를 주러 온다)
+const churuIcon = ["......Oc", ".....OCc", "....OCCO", "...OCCO.", "..OCCO..", ".OCCO...", "OCCO....", "OOO....."];
 
 /* ---------- 파일로 쓰기 ---------- */
 const body = `/**
@@ -185,7 +287,7 @@ export const CAT_H = ${H};
 
 export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
-  | "groomA" | "groomB" | "stretch";
+  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB";
 
 export type CatKind = "taeri" | "jeri";
 
@@ -197,6 +299,22 @@ export const CAT_NAMES: Record<CatKind, string> = { taeri: "태리", jeri: "제�
 
 /** 역할 글자 → 색 */
 export const PALETTES: Record<CatKind, Record<string, string>> = ${JSON.stringify(palettes, null, 2)};
+
+/** 밥그릇·물그릇 — 채워진 정도(0~3)별 그림 */
+export type BowlKind = "food" | "water";
+export const BOWL_W = 12;
+export const BOWL_H = 6;
+export const BOWLS: Record<BowlKind, CatFrame[]> = ${JSON.stringify(bowls, null, 2)};
+export const BOWL_PALETTES: Record<BowlKind, Record<string, string>> = ${JSON.stringify(bowlPalettes, null, 2)};
+
+/** 주인 이윤 — 츄르를 주러 온다 */
+export type OwnerFrame = "stand" | "walkA" | "walkB" | "give" | "wave";
+export const OWNER_NAME = "이윤";
+export const OWNER_W = ${OW};
+export const OWNER_H = ${OH};
+export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = ${JSON.stringify(owner, null, 2)};
+export const OWNER_PALETTE: Record<string, string> = ${JSON.stringify(ownerPalette, null, 2)};
+export const CHURU_ICON: CatFrame = ${JSON.stringify(churuIcon, null, 2)};
 `;
 fs.writeFileSync("lib/cat-sprites.ts", body);
 
@@ -216,6 +334,20 @@ if (process.argv[2]) {
     rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = palettes[kind][ch]; if (c) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
     html += `<svg width="${W * 2}" height="${H * 2}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">${rects}</svg>`;
   }
+  html += '</div><div style="display:flex;gap:12px;padding:10px">';
+  for (const kind of ["food", "water"]) bowls[kind].forEach((rows, level) => {
+    let rects = "";
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = bowlPalettes[kind][ch]; if (c) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
+    html += `<div><svg width="96" height="48" viewBox="0 0 12 6" shape-rendering="crispEdges" style="background:#fffdf9;border:1px solid #e4dccb">${rects}</svg><div style="font-size:12px;color:#555">${kind} ${level}</div></div>`;
+  });
+  html += '</div><div style="display:flex;gap:12px;padding:10px;align-items:flex-end">';
+  for (const [name, rows] of Object.entries(owner)) {
+    let rects = "";
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = ownerPalette[ch]; if (c) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
+    html += `<div><svg width="${OW * 7}" height="${OH * 7}" viewBox="0 0 ${OW} ${OH}" shape-rendering="crispEdges" style="background:#fffdf9;border:1px solid #e4dccb">${rects}</svg><div style="font-size:12px;color:#555">이윤 · ${name}</div></div>`;
+  }
+  { let rects = ""; churuIcon.forEach((row, y) => [...row].forEach((ch, x) => { const c = ownerPalette[ch]; if (c) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
+    html += `<div><svg width="64" height="64" viewBox="0 0 8 8" shape-rendering="crispEdges" style="background:#fffdf9;border:1px solid #e4dccb">${rects}</svg><div style="font-size:12px;color:#555">츄르</div></div>`; }
   fs.writeFileSync(process.argv[2], html + "</div></body>");
 }
 console.log("lib/cat-sprites.ts 생성:", Object.keys(frames.taeri).length, "장면 × 2마리,", W + "x" + H);

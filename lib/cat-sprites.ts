@@ -11,7 +11,7 @@ export const CAT_H = 18;
 
 export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
-  | "groomA" | "groomB" | "stretch";
+  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB";
 
 export type CatKind = "taeri" | "jeri";
 
@@ -177,6 +177,46 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "..OPPPPPPPPPPPPOBBBWWWWWBBBO..",
       "..OPSPPSPPSPPPPOOOOOOOOOOOO...",
       "...OOOOOOOOOOOOO.............."
+    ],
+    "eatA": [
+      "..............................",
+      "..............................",
+      "..OO..........................",
+      ".OPPO.........................",
+      "OPSO..........................",
+      "OPPO..........................",
+      ".OPSO.........................",
+      "..OPOOOOOOOOOOOOOOOO..........",
+      "...OHHHHHHHHHHHHHHHOO.....OO..",
+      "..OBBYBBBYBBBYBBBYOPIO...OIPO.",
+      "..OBBYBBBYBBBYBBBYOPPOOOOOPPO.",
+      "..OBBBBBBBBBBBBBBOGGGSGMGSGGGO",
+      "..OBBBBBBBBBBBBBBOGGGGGMGGGGGO",
+      "...OBBBBBBBBBBBBBOGGCCMNMCCGGO",
+      "....OBOOOBOOOOOOBOBBBWWWWWBBBO",
+      "....OBO.OBO....OBOBBBWWWWWBBBO",
+      "....OFO.OFO....OFOOOOOOOOOOOO.",
+      "....OOO.OOO....OOO.OOO........"
+    ],
+    "eatB": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      ".OOO..........................",
+      "OPSPO.........................",
+      ".OOPOOOOOOOOOOOOOOOO..........",
+      "...OHHHHHHHHHHHHHHHBO.........",
+      "..OBBYBBBYBBBYBBBYBOOO....OO..",
+      "..OBBYBBBYBBBYBBBYOPIO...OIPO.",
+      "..OBBBBBBBBBBBBBBBOPPOOOOOPPO.",
+      "..OBBBBBBBBBBBBBBOGGGSGMGSGGGO",
+      "...OBBBBBBBBBBBBBOGGGGGMGGGGGO",
+      "....OBOOOBOOOOOOBOGGCCMNMCCGGO",
+      "....OBO.OBO....OBOBBBWWWWWBBBO",
+      "....OFO.OFO....OFOBBBWWTWWBBBO",
+      "....OOO.OOO....OOOOOOOOTOOOOO."
     ],
     "jump": [
       "...................OO.....OO..",
@@ -360,6 +400,46 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "..OPSPPSPPSPPPPOOOOWWWOO......",
       "...OOOOOOOOOOOOO...OOO........"
     ],
+    "eatA": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..OO..........................",
+      ".OPPO.........................",
+      "OPSO..........................",
+      "OPPO................O.......O.",
+      ".OPSO..............OPO.....OPO",
+      "..OPOOOOOOOOOOOOOOOOPIO...OIPO",
+      "...OHHHHHHHHHHHHHHHOPPOOOOOPPO",
+      "..OBBYBBBYBBBYBBBYBOGGSGMGSGGO",
+      "..OBBBBBBBBBBBBBBBBOGGGGMGGGGO",
+      "...OBBBBBBBBBBBBBBWOGCCMNMCCGO",
+      "....OBOOOBOOOOOOBOOOOBWWWWWBO.",
+      "....OBO.OBO....OBO.OBOOWWWOO..",
+      "....OFO.OFO....OFO.OFO.OOO....",
+      "....OOO.OOO....OOO.OOO........"
+    ],
+    "eatB": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      ".OOO..........................",
+      "OPSPO...............O.......O.",
+      ".OOPOOOOOOOOOOOOOOOOPO.....OPO",
+      "...OHHHHHHHHHHHHHHHOPIO...OIPO",
+      "..OBBYBBBYBBBYBBBYBOPPOOOOOPPO",
+      "..OBBBBBBBBBBBBBBBBOGGSGMGSGGO",
+      "...OBBBBBBBBBBBBBBWOGGGGMGGGGO",
+      "....OBOOOBOOOOOOBOOOGCCMNMCCGO",
+      "....OBO.OBO....OBO.OOBWWWWWBO.",
+      "....OFO.OFO....OFO.OFOOWTWOO..",
+      "....OOO.OOO....OOO.OOO.OTO...."
+    ],
     "jump": [
       "....................O.......O.",
       "...................OPO.....OPO",
@@ -427,3 +507,255 @@ export const PALETTES: Record<CatKind, Record<string, string>> = {
     "Y": "#e3d4c6"
   }
 };
+
+/** 밥그릇·물그릇 — 채워진 정도(0~3)별 그림 */
+export type BowlKind = "food" | "water";
+export const BOWL_W = 12;
+export const BOWL_H = 6;
+export const BOWLS: Record<BowlKind, CatFrame[]> = {
+  "food": [
+    [
+      "............",
+      "............",
+      "RRRRRRRRRRRR",
+      "RDDDDDDDDDDR",
+      ".RDDDDDDDDR.",
+      "..RRRRRRRR.."
+    ],
+    [
+      "............",
+      "....KKKK....",
+      "RRRRRRRRRRRR",
+      "RDDDDDDDDDDR",
+      ".RDDDDDDDDR.",
+      "..RRRRRRRR.."
+    ],
+    [
+      "............",
+      "..KKKKKKKK..",
+      "RRRRRRRRRRRR",
+      "RDDDDDDDDDDR",
+      ".RDDDDDDDDR.",
+      "..RRRRRRRR.."
+    ],
+    [
+      "....KKKK....",
+      "..KJKKKJKK..",
+      "RRRRRRRRRRRR",
+      "RDDDDDDDDDDR",
+      ".RDDDDDDDDR.",
+      "..RRRRRRRR.."
+    ]
+  ],
+  "water": [
+    [
+      "............",
+      "............",
+      "RRRRRRRRRRRR",
+      "RGGGGGGGGGGR",
+      ".RGGGGGGGGR.",
+      "..RRRRRRRR.."
+    ],
+    [
+      "............",
+      "............",
+      "RRRRRRRRRRRR",
+      "RGGGGGGGGGGR",
+      ".RGWWWWWWGR.",
+      "..RRRRRRRR.."
+    ],
+    [
+      "............",
+      "............",
+      "RRRRRRRRRRRR",
+      "RGGGGGGGGGGR",
+      ".RWWWWWWWWR.",
+      "..RRRRRRRR.."
+    ],
+    [
+      "............",
+      "............",
+      "RRRRRRRRRRRR",
+      "RWWLWWWWWWWR",
+      ".RWWWWWWWWR.",
+      "..RRRRRRRR.."
+    ]
+  ]
+};
+export const BOWL_PALETTES: Record<BowlKind, Record<string, string>> = {
+  "food": {
+    "R": "#b96a45",
+    "D": "#e08f63",
+    "K": "#8a5a2b",
+    "J": "#a9743a"
+  },
+  "water": {
+    "R": "#6f9cc4",
+    "G": "#dcebf7",
+    "W": "#8cc8f2",
+    "L": "#ffffff"
+  }
+};
+
+/** 주인 이윤 — 츄르를 주러 온다 */
+export type OwnerFrame = "stand" | "walkA" | "walkB" | "give" | "wave";
+export const OWNER_NAME = "이윤";
+export const OWNER_W = 20;
+export const OWNER_H = 24;
+export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
+  "stand": [
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO......",
+    "..OHHSSSsSSHHO......",
+    "..OHHOSSSSOHHO......",
+    "..OHHOTTTTOHHO......",
+    "..OHOTTTTTTOHO......",
+    "..OHSTTTTTTSHO......",
+    "...OSTTTTTTSO.......",
+    "....OTTTTTTO........",
+    "....OKKKKKKO........",
+    "...OKKKKKKKKO.......",
+    "...OOOOOOOOOO.......",
+    ".....OSOOSO.........",
+    ".....OSOOSO.........",
+    ".....OSOOSO.........",
+    "....OBBOOBBO........",
+    "....OOOOOOOO........"
+  ],
+  "walkA": [
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO......",
+    "..OHHSSSsSSHHO......",
+    "..OHHOSSSSOHHO......",
+    "..OHHOTTTTOHHO......",
+    "..OHOTTTTTTOHO......",
+    "..OHSTTTTTTSHO......",
+    "...OSTTTTTTSO.......",
+    "....OTTTTTTO........",
+    "....OKKKKKKO........",
+    "...OKKKKKKKKO.......",
+    "...OOOOOOOOOO.......",
+    "....OSO..OSO........",
+    "...OSO....OSO.......",
+    "...OSO....OSO.......",
+    "..OBBO....OBBO......",
+    "..OOOO....OOOO......"
+  ],
+  "walkB": [
+    "....................",
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO......",
+    "..OHHSSSsSSHHO......",
+    "..OHHOSSSSOHHO......",
+    "..OHHOTTTTOHHO......",
+    "..OHOTTTTTTOHO......",
+    "..OHSTTTTTTSHO......",
+    "...OSTTTTTTSO.......",
+    "....OTTTTTTO........",
+    "....OKKKKKKO........",
+    "...OKKKKKKKKO.......",
+    "...OOOOSSOOOO.......",
+    "......OSSO..........",
+    "......OSSO..........",
+    ".....OBBBBO.........",
+    ".....OOOOOO........."
+  ],
+  "give": [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO......",
+    "..OHHSSSsSSHHO......",
+    "..OHHOSSSSOHHO......",
+    "..OHHOTTTTOHHO......",
+    "..OHOTTTTTTOOOOO....",
+    "..OHSTTTTTTTTTSOCCCc",
+    "...OSTTTTTTOOOOOCCCc",
+    "....OTTTTTTO........",
+    "...OKKKKKKKKO.......",
+    "..OKKKKKKKKKKO......",
+    "..OBBOOOOOOBBO......",
+    "..OOOOOOOOOOOO......"
+  ],
+  "wave": [
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO......",
+    "..OHHSSSsSSHHO......",
+    "..OHHOSSSSOHHO......",
+    "..OHHOTTTTOHHOSO....",
+    "..OHOTTTTTTOHOSO....",
+    "..OHSTTTTTTTTTO.....",
+    "...OSTTTTTTOOO......",
+    "....OTTTTTTO........",
+    "....OKKKKKKO........",
+    "...OKKKKKKKKO.......",
+    "...OOOOOOOOOO.......",
+    ".....OSOOSO.........",
+    ".....OSOOSO.........",
+    ".....OSOOSO.........",
+    "....OBBOOBBO........",
+    "....OOOOOOOO........"
+  ]
+};
+export const OWNER_PALETTE: Record<string, string> = {
+  "O": "#3a2a2a",
+  "H": "#4a3028",
+  "h": "#7a5443",
+  "S": "#fbdcc4",
+  "s": "#f4a09a",
+  "E": "#2a1c1c",
+  "W": "#ffffff",
+  "T": "#f7b8c8",
+  "t": "#ec9bb0",
+  "K": "#2f3f63",
+  "B": "#7a4a3a",
+  "C": "#f39a3d",
+  "c": "#fff1d6"
+};
+export const CHURU_ICON: CatFrame = [
+  "......Oc",
+  ".....OCc",
+  "....OCCO",
+  "...OCCO.",
+  "..OCCO..",
+  ".OCCO...",
+  "OCCO....",
+  "OOO....."
+];
