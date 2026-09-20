@@ -59,7 +59,7 @@ export default function CatCare() {
   );
 
   return (
-    <div className="mt-auto flex justify-end gap-2 px-5 pt-6 motion-reduce:hidden">
+    <div className="mt-auto flex justify-end gap-2 px-5 pt-6">
       {shown.map((item) => (
         <button
           key={item.kind}

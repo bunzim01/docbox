@@ -698,7 +698,9 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
 
   useEffect(() => {
     const width = boxRef.current?.clientWidth ?? 360;
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // 기기의 '동작 줄이기' 설정은 따르지 않는다.
+    // 사용자가 직접 원해서 만든 재미 요소인데, 사용자 PC(윈도우 애니메이션 끔)에서 통째로 꺼져 버렸기 때문.
+    const still = false;
     stillRef.current = still;
 
     let bowls: World["bowls"] = { food: FULL, water: FULL };
