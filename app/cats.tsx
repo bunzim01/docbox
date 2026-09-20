@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { takePendingCatEvent, type CatEvent } from "@/lib/cat-events";
-import { CAT_H, CAT_W, FRAMES, PALETTES, type CatKind, type FrameName } from "@/lib/cat-sprites";
+import { CAT_H, CAT_NAMES, CAT_W, FRAMES, PALETTES, type CatKind, type FrameName } from "@/lib/cat-sprites";
 
 /**
- * 화면 맨 아래를 돌아다니는 픽셀 고양이 두 마리 (치즈 먼치킨 · 샴 먼치킨).
+ * 화면 맨 아래를 돌아다니는 픽셀 고양이 두 마리 — 사용자의 실제 고양이 태리(크림색)와 제리(회색 포인트).
  * 순전히 재미용 — 버튼보다 뒤에 깔리고, 눌러도 다른 동작을 방해하지 않는다.
  */
 
-const PX = 3; // 도트 한 칸 크기
+const PX = 2; // 도트 한 칸 크기 (가로 30칸 × 2px = 60px — 예전과 같은 크기에 더 촘촘한 그림)
 const W = CAT_W * PX;
 const H = CAT_H * PX;
 const TICK = 130; // ms — 일부러 뚝뚝 끊기는 도트 느낌
@@ -242,7 +242,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
 
   const sprites = useMemo(() => {
     const out = {} as Record<CatKind, Record<string, [string, string][]>>;
-    for (const kind of ["cheese", "siamese"] as CatKind[]) {
+    for (const kind of ["taeri", "jeri"] as CatKind[]) {
       out[kind] = {};
       for (const [name, rows] of Object.entries(FRAMES)) out[kind][name] = spritePaths(kind, rows);
     }
@@ -255,8 +255,8 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     stillRef.current = still;
 
     catsRef.current = [
-      { kind: "cheese", x: width * 0.22, y: 0, dir: 1, state: still ? "sit" : "walk", ticks: 40, frame: 0, heart: 0, alert: 0 },
-      { kind: "siamese", x: width * 0.62, y: 0, dir: -1, state: still ? "sleep" : "sit", ticks: 25, frame: 0, heart: 0, alert: 0 },
+      { kind: "taeri", x: width * 0.22, y: 0, dir: 1, state: still ? "sit" : "walk", ticks: 40, frame: 0, heart: 0, alert: 0 },
+      { kind: "jeri", x: width * 0.62, y: 0, dir: -1, state: still ? "sleep" : "sit", ticks: 25, frame: 0, heart: 0, alert: 0 },
     ];
     setVersion((v) => v + 1);
 
@@ -335,7 +335,9 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
             <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-base font-black text-gold">!</span>
           )}
           {cat.heart > 0 && (
-            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-base text-red-500">♥</span>
+            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-base font-bold text-ink">
+              {CAT_NAMES[cat.kind]} <span className="text-red-500">♥</span>
+            </span>
           )}
         </button>
       ))}
