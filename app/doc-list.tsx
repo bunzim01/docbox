@@ -554,14 +554,6 @@ export default function DocList({
         onNotify={setToast}
       />
 
-      {atRoot && homeList.length === 0 && documents.length > 0 && (
-        <p className="px-5 pt-6 text-base leading-relaxed text-zinc-400 sm:hidden">
-          <span className="text-gold">★</span> 자주 보내는 문서는 ⋯ → 즐겨찾기 해두세요.
-          <br />
-          여기에 카톡 버튼과 함께 나타납니다.
-        </p>
-      )}
-
       {atRoot ? (
         homeList.length > 0 && (
           <>
