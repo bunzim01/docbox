@@ -4,7 +4,7 @@
 //           F 발  E 눈동자색  K 동공  L 눈 반짝임  C 감은 눈  N 코  I 귀 안쪽  T 혀  . 투명
 import fs from "node:fs";
 
-const W = 30, H = 17;
+const W = 30, H = 18;
 const blank = () => Array.from({ length: H }, () => Array(W).fill("."));
 function blit(canvas, part, x0, y0) {
   part.forEach((row, dy) => [...row].forEach((ch, dx) => {
@@ -12,54 +12,19 @@ function blit(canvas, part, x0, y0) {
     if (ch !== "." && x >= 0 && x < W && y >= 0 && y < H) canvas[y][x] = ch;
   }));
 }
-const compose = (...layers) => { const c = blank(); layers.forEach(([p, x, y]) => blit(c, p, x, y)); return c.map((r) => r.join("")); };
+// 모든 부품을 한 칸 아래로(y+1) — 제리의 긴 귀가 잘리지 않게 위에 여유를 둔다
+const compose = (...layers) => { const c = blank(); layers.forEach(([p, x, y]) => blit(c, p, x, y + 1)); return c.map((r) => r.join("")); };
 
-/* ---------- 부품 ---------- */
-const HEAD = [
-  ".OO.....OO.",
-  "OPIO...OIPO",
-  "OPPOOOOOPPO",
-  "OGGSGMGSGGO",
-  "OGKLGMGKLGO",
-  "OGEEMNMEEGO",
-  "OBBWWWWWBBO",
-  ".OOWWWWWOO.",
-  "...OOOOO...",
-];
-const HEAD_CLOSED = [...HEAD.slice(0, 4), "OGGGGMGGGGO", "OGCCMNMCCGO", ...HEAD.slice(6)];
-const HEAD_LICK = [...HEAD_CLOSED.slice(0, 7), ".OOWWTWWOO.", "...OOTOO..."];
-
-const BODY = [
-  "..OOOOOOOOOOOOOOOO..",
-  ".OHHHHHHHHHHHHHHHBO.",
-  "OBBYBBBYBBBYBBBYBBBO",
-  "OBBYBBBYBBBYBBBYBBBO",
-  "OBBBBBBBBBBBBBBBBWWO",
-  ".OBBBBBBBBBBBBBBWWO.",
-  "..OOOOOOOOOOOOOOOO..",
-];
+/* ---------- 공통 부품 ---------- */
 const LEG = ["OBO", "OBO", "OFO", "OOO"];
 const LEG_SHORT = ["OBO", "OFO", "OOO"];
-
 const TAIL_UP = ["..OO..", ".OPPO.", "OPSO..", "OPPO..", ".OPSO.", "..OPPO", "...OPO", "....OO"];
 const TAIL_MID = [".OOO...", "OPSPO..", ".OOPPO.", "...OSPO", "....OPO", ".....OO"];
 const TAIL_BACK = ["OOOOOO.", "OPSPPSO", ".OOOOOO"];
 const TAIL_GROUND = [".OOOOOOOO", "OPPSPPSPP", ".OOOOOOOO"];
-
-const SIT = [
-  "....OOOOOO...",
-  "...OBBBBBBO..",
-  "..OBBYBBWWO..",
-  ".OBBBBBBWWWO.",
-  ".OBYBBBBWWWO.",
-  "OBBBBBBBBWWO.",
-  "OBBYBBBBBBBO.",
-  "OBBBBBOBBOBO.",
-  "OFFFBBOFFOFFO",
-  "OOOOOOOOOOOOO",
-];
 const PAW_UP = [".OO.", "OFFO", "OFFO", ".OBO", ".OBO"];
-
+const LEG_BACK = ["..OBO", ".OBO.", "OFO..", "OO..."];
+const LEG_FRONT = ["OBO..", ".OBO.", "..OFO", "...OO"];
 const STRETCH = [
   "....OOOOOO....................",
   "...OHHHHHBOOO.................",
@@ -75,31 +40,126 @@ const STRETCH = [
   "..OFFFO..........OOOOOOOOOO...",
   "..OOOOO.......................",
 ];
-const SLEEP = [
+
+/* ---------- 태리: 넓고 둥근 얼굴 · 볼살 · 넓적한 턱 · 통통한 몸 ---------- */
+const T_HEAD = [
+  "..OO.....OO..",
+  ".OPIO...OIPO.",
+  ".OPPOOOOOPPO.",
+  "OGGGSGMGSGGGO",
+  "OGGKLGMGKLGGO",
+  "OGGEEMNMEEGGO",
+  "OBBBWWWWWBBBO",
+  "OBBBWWWWWBBBO",
+  ".OOOOOOOOOOO.",
+];
+const T_HEAD_CLOSED = [...T_HEAD.slice(0, 4), "OGGGGGMGGGGGO", "OGGCCMNMCCGGO", ...T_HEAD.slice(6)];
+const T_HEAD_LICK = [...T_HEAD_CLOSED.slice(0, 7), "OBBBWWTWWBBBO", ".OOOOOTOOOOO."];
+const T_BODY = [
+  "..OOOOOOOOOOOOOOOO..",
+  ".OHHHHHHHHHHHHHHHBO.",
+  "OBBYBBBYBBBYBBBYBBBO",
+  "OBBYBBBYBBBYBBBYBBBO",
+  "OBBBBBBBBBBBBBBBBBBO",
+  "OBBBBBBBBBBBBBBBBWWO",
+  ".OBBBBBBBBBBBBBBWWO.",
+  "..OOOOOOOOOOOOOOOO..",
+];
+const T_SIT = [
+  ".....OOOOOO...",
+  "...OOBBBBBBO..",
+  "..OBBBYBBWWWO.",
+  ".OBBBBBBBWWWO.",
+  "OBBYBBBBBWWWWO",
+  "OBBBBBBBBBWWWO",
+  "OBBYBBBBBBBBBO",
+  "OBBBBBBOBBOBBO",
+  "OFFFBBBOFFOFFO",
+  "OOOOOOOOOOOOOO",
+];
+const T_SLEEP = [
+  ".......OOOOOOOOOOO............",
+  ".....OOHHHHHHHHHHHOO..........",
+  "....OBBBYBBBYBBBYBBBO.........",
+  "...OBBBBYBBBYBBBYBBBBO........",
+  "..OBBBBBBBBBBBBBBBBBBBO.......",
+  "..OBBBBBBBBBBBBBBBBBBBO.......",
+  "..OBBBBBBBBBBBBBBBBBBBO.......",
+  "..OPPPPPPPPPPPPBBBBBBBO.......",
+  "..OPSPPSPPSPPPPOOOOOOOO.......",
+  "...OOOOOOOOOOOOO..............",
+];
+
+/* ---------- 제리: 좁은 얼굴 · 뾰족한 턱 · 쫑긋 긴 귀 · 날씬한 몸 ---------- */
+const J_HEAD = [
+  ".O.......O.",
+  "OPO.....OPO",
+  "OPIO...OIPO",
+  "OPPOOOOOPPO",
+  "OGGSGMGSGGO",
+  "OGKLGMGKLGO",
+  "OGEEMNMEEGO",
+  ".OBWWWWWBO.",
+  "..OOWWWOO..",
+  "....OOO....",
+];
+const J_HEAD_CLOSED = [...J_HEAD.slice(0, 5), "OGGGGMGGGGO", "OGCCMNMCCGO", ...J_HEAD.slice(7)];
+const J_HEAD_LICK = [...J_HEAD_CLOSED.slice(0, 8), "..OOWTWOO..", "....OTO...."];
+const J_BODY = [
+  "..OOOOOOOOOOOOOOOO..",
+  ".OHHHHHHHHHHHHHHHBO.",
+  "OBBYBBBYBBBYBBBYBBBO",
+  "OBBBBBBBBBBBBBBBBWWO",
+  ".OBBBBBBBBBBBBBBWWO.",
+  "..OOOOOOOOOOOOOOOO..",
+];
+const J_SIT = [
+  "....OOOOO....",
+  "...OBBBBBO...",
+  "..OBBYBWWO...",
+  "..OBBBBWWWO..",
+  ".OBYBBBWWWO..",
+  ".OBBBBBBWWO..",
+  "OBBYBBBBBBO..",
+  "OBBBBOBBOBO..",
+  "OFFFBOFFOFFO.",
+  "OOOOOOOOOOOO.",
+];
+const J_SLEEP = [
   ".......OOOOOOOOOO.............",
   ".....OOHHHHHHHHHHOO...........",
   "....OBBBYBBBYBBBYBBO..........",
-  "...OBBBBYBBBYBBBYBBBO.........",
-  "..OBBBBBBBBBBBBBBBBBBO........",
+  "...OBBBBBBBBBBBBBBBBO.........",
   "..OBBBBBBBBBBBBBBBBBBO........",
   "..OPPPPPPPPPPPPBBBBBBO........",
-  "..OPYPPYPPYPPPPOOOOOOO........",
+  "..OPSPPSPPSPPPPOOOOOOO........",
   "...OOOOOOOOOOOOO..............",
 ];
-const LEG_BACK = ["..OBO", ".OBO.", "OFO..", "OO..."];
-const LEG_FRONT = ["OBO..", ".OBO.", "..OFO", "...OO"];
 
 /* ---------- 조립 ---------- */
 const frames = {
-  walkA: compose([TAIL_UP, 0, 2], [BODY, 2, 7], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [HEAD, 18, 1]),
-  walkB: compose([TAIL_MID, 0, 5], [BODY, 2, 7], [LEG, 5, 13], [LEG_SHORT, 8, 13], [LEG_SHORT, 15, 13], [LEG, 18, 13], [HEAD, 18, 2]),
-  sit: compose([TAIL_GROUND, 1, 14], [SIT, 9, 7], [HEAD, 12, 0]),
-  sitWag: compose([TAIL_UP, 4, 7], [SIT, 9, 7], [HEAD, 12, 0]),
-  groomA: compose([TAIL_GROUND, 1, 14], [SIT, 9, 7], [PAW_UP, 22, 8], [HEAD_CLOSED, 13, 1]),
-  groomB: compose([TAIL_GROUND, 1, 14], [SIT, 9, 7], [PAW_UP, 22, 9], [HEAD_LICK, 13, 2]),
-  stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [HEAD_CLOSED, 18, 5]),
-  sleep: compose([SLEEP, 0, 8], [HEAD_CLOSED, 15, 7]),
-  jump: compose([TAIL_BACK, 0, 5], [BODY, 3, 4], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [HEAD, 19, 0]),
+  taeri: {
+    walkA: compose([TAIL_UP, 0, 1], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD, 17, 1]),
+    walkB: compose([TAIL_MID, 0, 4], [T_BODY, 2, 6], [LEG, 5, 13], [LEG_SHORT, 8, 13], [LEG_SHORT, 15, 13], [LEG, 18, 13], [T_HEAD, 17, 2]),
+    sit: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [T_HEAD, 11, 0]),
+    sitWag: compose([TAIL_UP, 3, 7], [T_SIT, 8, 7], [T_HEAD, 11, 0]),
+    groomA: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [PAW_UP, 22, 8], [T_HEAD_CLOSED, 12, 1]),
+    groomB: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [PAW_UP, 22, 9], [T_HEAD_LICK, 12, 2]),
+    stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [T_HEAD_CLOSED, 17, 5]),
+    sleep: compose([T_SLEEP, 0, 7], [T_HEAD_CLOSED, 15, 7]),
+    jump: compose([TAIL_BACK, 0, 5], [T_BODY, 3, 3], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [T_HEAD, 17, -1]),
+  },
+  jeri: {
+    walkA: compose([TAIL_UP, 0, 3], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD, 18, 1]),
+    walkB: compose([TAIL_MID, 0, 6], [J_BODY, 2, 8], [LEG, 5, 13], [LEG_SHORT, 8, 13], [LEG_SHORT, 15, 13], [LEG, 18, 13], [J_HEAD, 18, 2]),
+    sit: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [J_HEAD, 11, -1]),
+    sitWag: compose([TAIL_UP, 4, 7], [J_SIT, 9, 7], [J_HEAD, 11, -1]),
+    groomA: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [PAW_UP, 21, 8], [J_HEAD_CLOSED, 12, 0]),
+    groomB: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [PAW_UP, 21, 9], [J_HEAD_LICK, 12, 1]),
+    stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [J_HEAD_CLOSED, 18, 4]),
+    sleep: compose([J_SLEEP, 0, 9], [J_HEAD_CLOSED, 15, 7]),
+    jump: compose([TAIL_BACK, 0, 6], [J_BODY, 3, 5], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [J_HEAD, 19, -1]),
+  },
 };
 
 const palettes = {
@@ -127,9 +187,10 @@ export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
   | "groomA" | "groomB" | "stretch";
 
-export const FRAMES: Record<FrameName, CatFrame> = ${JSON.stringify(frames, null, 2)};
-
 export type CatKind = "taeri" | "jeri";
+
+/** 고양이마다 그림이 다르다 — 태리는 둥글고 통통하게, 제리는 얼굴이 갸름하고 날씬하게 */
+export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = ${JSON.stringify(frames, null, 2)};
 
 /** 고양이 이름 (실제 고양이 태리·제리) */
 export const CAT_NAMES: Record<CatKind, string> = { taeri: "태리", jeri: "제리" };
@@ -143,18 +204,18 @@ fs.writeFileSync("lib/cat-sprites.ts", body);
 if (process.argv[2]) {
   const px = 7;
   let html = '<body style="margin:0;background:#faf6ee;font-family:sans-serif"><div style="display:flex;flex-wrap:wrap;gap:10px;padding:10px">';
-  for (const kind of ["taeri", "jeri"]) for (const [name, rows] of Object.entries(frames)) {
+  for (const kind of ["taeri", "jeri"]) for (const [name, rows] of Object.entries(frames[kind])) {
     let rects = "";
     rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = palettes[kind][ch]; if (c) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
     html += `<div><svg width="${W * px}" height="${H * px}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges" style="background:#fffdf9;border:1px solid #e4dccb">${rects}</svg><div style="font-size:12px;color:#555">${kind} · ${name}</div></div>`;
   }
   // 실제 크기(2배)로도 한 줄
   html += '</div><div style="display:flex;gap:16px;padding:10px;align-items:flex-end">';
-  for (const kind of ["taeri", "jeri"]) for (const [name, rows] of Object.entries(frames)) {
+  for (const kind of ["taeri", "jeri"]) for (const [name, rows] of Object.entries(frames[kind])) {
     let rects = "";
     rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = palettes[kind][ch]; if (c) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
     html += `<svg width="${W * 2}" height="${H * 2}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">${rects}</svg>`;
   }
   fs.writeFileSync(process.argv[2], html + "</div></body>");
 }
-console.log("lib/cat-sprites.ts 생성:", Object.keys(frames).length, "장면,", W + "x" + H);
+console.log("lib/cat-sprites.ts 생성:", Object.keys(frames.taeri).length, "장면 × 2마리,", W + "x" + H);

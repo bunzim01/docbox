@@ -244,7 +244,8 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     const out = {} as Record<CatKind, Record<string, [string, string][]>>;
     for (const kind of ["taeri", "jeri"] as CatKind[]) {
       out[kind] = {};
-      for (const [name, rows] of Object.entries(FRAMES)) out[kind][name] = spritePaths(kind, rows);
+      // 고양이마다 그림이 다르다 (태리는 둥글고 통통, 제리는 갸름하고 날씬)
+      for (const [name, rows] of Object.entries(FRAMES[kind])) out[kind][name] = spritePaths(kind, rows);
     }
     return out;
   }, []);
