@@ -5,6 +5,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "라이크웨이 자료실",
   description: "제안서를 모아두고 카톡으로 바로 보내기",
+  applicationName: "자료실",
+  // 아이폰 홈 화면에 추가했을 때: 아이콘 밑 이름 + 주소창 없는 전체 화면
+  appleWebApp: { capable: true, title: "자료실", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
