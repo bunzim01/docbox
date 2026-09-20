@@ -27,10 +27,10 @@ function PixelIcon({ rows, palette, size }: { rows: string[]; palette: Record<st
 }
 
 const ITEMS: { kind: CareKind; label: string; rows: string[]; palette: Record<string, string>; size: number }[] = [
-  { kind: "food", label: "밥 주기", rows: BOWLS.food[3], palette: BOWL_PALETTES.food, size: 22 },
-  { kind: "water", label: "물 주기", rows: BOWLS.water[3], palette: BOWL_PALETTES.water, size: 22 },
-  { kind: "churu", label: "츄르 주기", rows: CHURU_ICON, palette: OWNER_PALETTE, size: 14 },
-  { kind: "play", label: "놀아주기", rows: TOY_ICON, palette: TOY_PALETTE, size: 13 },
+  { kind: "food", label: "밥 주기", rows: BOWLS.food[3], palette: BOWL_PALETTES.food, size: 14 },
+  { kind: "water", label: "물 주기", rows: BOWLS.water[3], palette: BOWL_PALETTES.water, size: 14 },
+  { kind: "churu", label: "츄르", rows: CHURU_ICON, palette: OWNER_PALETTE, size: 10 },
+  { kind: "play", label: "놀아주기", rows: TOY_ICON, palette: TOY_PALETTE, size: 9 },
 ];
 
 /**
@@ -59,13 +59,13 @@ export default function CatCare() {
   );
 
   return (
-    <div className="mt-auto flex justify-end gap-2 px-5 pt-6">
+    <div className="mt-auto flex justify-end gap-1 px-5 pt-6">
       {shown.map((item) => (
         <button
           key={item.kind}
           type="button"
           onClick={() => careForCats(item.kind)}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-base ${
+          className={`flex h-6 items-center gap-1 whitespace-nowrap rounded-full border px-2 text-xs leading-none ${
             item.kind === "churu" || item.kind === "play"
               ? "border-zinc-200 bg-paper text-zinc-500 active:bg-zinc-100 sm:hover:bg-zinc-50"
               : "border-gold/40 bg-gold-soft font-semibold text-ink active:brightness-95 sm:hover:brightness-95"
