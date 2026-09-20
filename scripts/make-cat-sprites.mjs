@@ -147,6 +147,8 @@ const frames = {
     groomB: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [PAW_UP, 22, 9], [T_HEAD_LICK, 12, 2]),
     stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [T_HEAD_CLOSED, 17, 5]),
     sleep: compose([T_SLEEP, 0, 7], [T_HEAD_CLOSED, 15, 7]),
+    crouchA: compose([TAIL_BACK, 0, 9], [T_BODY, 3, 8], [LEG_SHORT, 5, 14], [LEG_SHORT, 9, 14], [LEG_SHORT, 16, 14], [LEG_SHORT, 20, 14], [T_HEAD, 17, 6]),
+    crouchB: compose([TAIL_MID, 0, 7], [T_BODY, 2, 7], [LEG_SHORT, 4, 14], [LEG_SHORT, 8, 14], [LEG_SHORT, 16, 14], [LEG_SHORT, 20, 14], [T_HEAD, 17, 6]),
     eatA: compose([TAIL_UP, 0, 1], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD_CLOSED, 17, 7]),
     eatB: compose([TAIL_MID, 0, 4], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD_LICK, 17, 8]),
     jump: compose([TAIL_BACK, 0, 5], [T_BODY, 3, 3], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [T_HEAD, 17, -1]),
@@ -160,6 +162,8 @@ const frames = {
     groomB: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [PAW_UP, 21, 9], [J_HEAD_LICK, 12, 1]),
     stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [J_HEAD_CLOSED, 18, 4]),
     sleep: compose([J_SLEEP, 0, 9], [J_HEAD_CLOSED, 15, 7]),
+    crouchA: compose([TAIL_BACK, 0, 10], [J_BODY, 3, 10], [LEG_SHORT, 5, 14], [LEG_SHORT, 9, 14], [LEG_SHORT, 16, 14], [LEG_SHORT, 20, 14], [J_HEAD, 18, 5]),
+    crouchB: compose([TAIL_MID, 0, 8], [J_BODY, 2, 9], [LEG_SHORT, 4, 14], [LEG_SHORT, 8, 14], [LEG_SHORT, 16, 14], [LEG_SHORT, 20, 14], [J_HEAD, 18, 5]),
     eatA: compose([TAIL_UP, 0, 3], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD_CLOSED, 19, 6]),
     eatB: compose([TAIL_MID, 0, 6], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD_LICK, 19, 7]),
     jump: compose([TAIL_BACK, 0, 6], [J_BODY, 3, 5], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [J_HEAD, 19, -1]),
@@ -287,7 +291,7 @@ export const CAT_H = ${H};
 
 export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
-  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB";
+  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB" | "crouchA" | "crouchB";
 
 export type CatKind = "taeri" | "jeri";
 

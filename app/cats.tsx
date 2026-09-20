@@ -10,7 +10,6 @@ import {
   CAT_H,
   CAT_NAMES,
   CAT_W,
-  CHURU_ICON,
   FRAMES,
   OWNER_FRAMES,
   OWNER_H,
@@ -43,7 +42,10 @@ const STORE = "docbox-bowls";
 const OWNER_SPEED = 6.5; // 이윤 걸음 (한 틱에 px) — 너무 느리면 그릇 채우기를 기다리기 답답하다
 
 type State =
-  | "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump" | "eat";
+  | "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump" | "eat"
+  | "stalk" // 사냥놀이: 납작 엎드려 엉덩이 씰룩
+  | "pounce" // 크게 도약해 덮친다
+  | "zoom"; // 우다다 — 끝에서 끝까지 전속력
 type Arrive = "watch" | "food" | "water" | "churu" | "beg";
 
 const HUNGRY = 1500; // 틱 (약 3분)
@@ -70,6 +72,8 @@ type Cat = {
   hops?: number; // 제자리에서 더 뛸 횟수 (기쁠 때)
   inPlace?: boolean;
   watching?: boolean; // 올라온 파일 구경 중 (이때는 장난을 걸지 않는다)
+  leap?: number; // 덮칠 때 한 틱에 나아가는 거리 (사냥감까지 닿도록 계산)
+  margin?: number; // 우다다 때 벽 앞에서 돌아서는 거리 — 쫓는 애는 조금 일찍 돌아 뒤를 따라간다
 };
 
 type Task = BowlKind | "churu";
@@ -92,22 +96,24 @@ type World = {
 };
 
 const JUMP_ARC = [5, 9, 11, 9, 5, 0];
+const POUNCE_ARC = [7, 13, 17, 17, 13, 7, 0];
+const ZOOM_SPEED = 9.5;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const isNight = () => {
   const h = new Date().getHours();
   return h >= 22 || h < 7;
 };
 
-/** 그릇·이윤이 서는 자리 (화면 너비에 맞춰) */
+/** 그릇(왼쪽 구석)·이윤이 츄르 주는 자리 */
 function places(width: number) {
-  const food = Math.round(width * 0.3);
-  const water = food + BW + 8;
+  const food = 6;
+  const water = food + BW + 6;
   return { food, water, owner: Math.round(Math.min(width * 0.62, width - OW - 84)) };
 }
 
-/** 그릇 앞에 서는 자리 — 태리는 왼쪽에서(오른쪽을 보고), 제리는 오른쪽에서(왼쪽을 보고) 마주 먹는다 */
-function spotAt(cat: Cat, bowlX: number): { x: number; face: 1 | -1 } {
-  return cat.kind === "taeri" ? { x: bowlX - 36, face: 1 } : { x: bowlX - 2, face: -1 };
+/** 그릇 앞에 서는 자리 — 그릇이 구석에 있으니 오른쪽에 서서 왼쪽을 보고 먹는다 */
+function spotAt(_cat: Cat, bowlX: number): { x: number; face: 1 | -1 } {
+  return { x: bowlX - 1, face: -1 };
 }
 
 function saveBowls(bowls: World["bowls"]) {
@@ -148,6 +154,8 @@ function next(cat: Cat, world: World, width: number) {
   for (const kind of ["food", "water"] as BowlKind[]) {
     const need = kind === "food" ? cat.hunger > HUNGRY : cat.thirst > THIRSTY;
     if (!need) continue;
+    const busy = world.cats.some((o) => o !== cat && (o.eating === kind || o.arrive === kind));
+    if (busy) continue; // 차례를 기다렸다가 다음에 간다
     const s = spotAt(cat, spots[kind]);
     // 그릇이 비어 있으면 가서 빈 그릇을 들여다보며 기다린다
     goTo(cat, s.x, s.face, world.bowls[kind] > 0 ? kind : "beg");
@@ -274,13 +282,15 @@ function step(world: World, width: number) {
         const kind = owner.task;
         world.bowls[kind] = FULL;
         saveBowls(world.bowls);
-        for (const cat of cats) {
-          const need = kind === "food" ? cat.hunger : cat.thirst;
-          if (need > (kind === "food" ? HUNGRY : THIRSTY) * 0.35 && cat.goal === undefined && cat.state !== "eat") {
-            cat.alert = 6;
-            const s = spotAt(cat, spots[kind]);
-            goTo(cat, s.x, s.face, kind, true);
-          }
+        // 더 배고픈 애가 먼저 달려온다 (그릇 하나에 한 마리씩)
+        const hungry = cats
+          .filter((cat) => cat.goal === undefined && cat.state !== "eat")
+          .sort((a, b) => (kind === "food" ? b.hunger - a.hunger : b.thirst - a.thirst))[0];
+        const level = hungry ? (kind === "food" ? hungry.hunger : hungry.thirst) : 0;
+        if (hungry && level > (kind === "food" ? HUNGRY : THIRSTY) * 0.35) {
+          hungry.alert = 6;
+          const s = spotAt(hungry, spots[kind]);
+          goTo(hungry, s.x, s.face, kind, true);
         }
       } else {
         cats.forEach((cat) => {
@@ -366,7 +376,18 @@ function step(world: World, width: number) {
       cat.y = JUMP_ARC[Math.min(cat.frame, JUMP_ARC.length - 1)];
       if (!cat.inPlace) cat.x += cat.dir * 3.5;
       cat.frame += 1;
-    } else if (cat.state === "wag" || cat.state === "groom" || cat.state === "eat") {
+    } else if (cat.state === "pounce") {
+      cat.y = POUNCE_ARC[Math.min(cat.frame, POUNCE_ARC.length - 1)];
+      cat.x += cat.dir * (cat.leap ?? 8);
+      cat.frame += 1;
+    } else if (cat.state === "zoom") {
+      // 우다다: 벽에 닿으면 그대로 돌아서 반대편으로 또 달린다
+      cat.x += cat.dir * ZOOM_SPEED;
+      cat.frame += 1;
+      const m = cat.margin ?? 0;
+      if (cat.dir === -1 && cat.x <= m) cat.dir = 1;
+      else if (cat.dir === 1 && cat.x >= max - m) cat.dir = -1;
+    } else if (["wag", "groom", "eat", "stalk"].includes(cat.state)) {
       cat.frame += 1;
     }
 
@@ -392,6 +413,44 @@ function step(world: World, width: number) {
         cat.ticks = cat.state === "run" ? Math.round(rand(14, 26)) : Math.round(rand(8, 20));
         cat.frame = 0;
         cat.then = undefined;
+      } else if (cat.state === "stalk") {
+        // 씰룩씰룩 끝 — 사냥감 바로 앞에 떨어지도록 덮친다!
+        const target = cats.find((o) => o !== cat)!;
+        const gap = Math.max(0, Math.abs(target.x - cat.x) - W * 0.6);
+        cat.leap = Math.min(15, Math.max(5, gap / POUNCE_ARC.length));
+        cat.dir = target.x >= cat.x ? 1 : -1;
+        cat.state = "pounce";
+        cat.frame = 0;
+        cat.ticks = POUNCE_ARC.length;
+      } else if (cat.state === "pounce") {
+        cat.y = 0;
+        cat.frame = 0;
+        const prey = cats.find((o) => o !== cat)!;
+        const canPlay = prey.goal === undefined && prey.state !== "eat" && prey.state !== "pounce";
+        if (canPlay && Math.abs(prey.x - cat.x) < W * 1.5) {
+          // 덮쳤다! 깜짝 놀라 튀고, 그대로 우다다 추격전
+          const away: 1 | -1 = prey.x >= cat.x ? 1 : -1;
+          const laps = Math.round(rand(45, 75));
+          prey.y = 0;
+          prey.alert = 6;
+          prey.dir = away;
+          prey.state = "zoom";
+          prey.ticks = laps;
+          prey.frame = 0;
+          prey.margin = 0;
+          cat.dir = away;
+          cat.state = "zoom";
+          cat.ticks = laps + 4;
+          cat.margin = 62;
+        } else {
+          cat.state = "sit";
+          cat.ticks = 10;
+        }
+      } else if (cat.state === "zoom") {
+        // 실컷 뛰었다 — 털썩 앉아 숨을 고른다
+        cat.state = Math.random() < 0.5 ? "groom" : "sit";
+        cat.ticks = Math.round(rand(24, 44));
+        cat.frame = 0;
       } else if (cat.state === "eat" && (cat.eating === "food" || cat.eating === "water")) {
         // 다 먹었다 — 그릇이 한 칸 줄고, 만족해서 그루밍
         const what = cat.eating;
@@ -417,7 +476,33 @@ function step(world: World, width: number) {
 
   if (owner.task === "churu") return; // 츄르 시간엔 장난 금지
 
-  if (awake(a) && awake(b) && dist < W * 1.3 && Math.random() < 0.05) {
+  if (awake(a) && awake(b) && dist > W * 1.2 && dist < W * 2.6 && Math.random() < 0.012) {
+    // 사냥놀이: 멀찍이서 납작 엎드려 엉덩이를 씰룩이다가 덮친다
+    const [hunter, prey] = Math.random() < 0.5 ? [a, b] : [b, a];
+    hunter.dir = prey.x >= hunter.x ? 1 : -1;
+    hunter.state = "stalk";
+    hunter.frame = 0;
+    hunter.ticks = Math.round(rand(12, 20));
+    // 사냥감은 그 자리에 앉아 있는다 (모르는 척)
+    if (prey.state === "walk") {
+      prey.state = "sit";
+      prey.ticks = 40;
+    }
+  } else if (awake(a) && awake(b) && Math.random() < 0.0035) {
+    // 갑자기 우다다! 한 마리가 달리기 시작하면 다른 애도 따라 뛴다
+    const [first, second] = Math.random() < 0.5 ? [a, b] : [b, a];
+    const laps = Math.round(rand(50, 85));
+    first.state = "zoom";
+    first.ticks = laps;
+    first.frame = 0;
+    first.margin = 0;
+    second.margin = 62;
+    second.alert = 5;
+    second.dir = first.dir;
+    second.state = "zoom";
+    second.ticks = laps + 6;
+    second.frame = 0;
+  } else if (awake(a) && awake(b) && dist < W * 1.3 && Math.random() < 0.05) {
     // 장난: 한 마리가 덮치고, 다른 한 마리는 놀라 도망 → 쫓아간다
     const [hunter, prey] = Math.random() < 0.5 ? [a, b] : [b, a];
     const away: 1 | -1 = prey.x >= hunter.x ? 1 : -1;
@@ -472,6 +557,12 @@ function frameOf(cat: Cat): FrameName {
       return Math.floor(cat.frame / 3) % 2 === 0 ? "groomA" : "groomB";
     case "eat":
       return Math.floor(cat.frame / 3) % 2 === 0 ? "eatA" : "eatB";
+    case "stalk":
+      return Math.floor(cat.frame / 2) % 2 === 0 ? "crouchA" : "crouchB";
+    case "pounce":
+      return "jump";
+    case "zoom":
+      return cat.frame % 2 === 0 ? "walkA" : "walkB";
     default: {
       const speed = cat.state === "run" ? 1 : 2;
       return Math.floor(cat.frame / speed) % 2 === 0 ? "walkA" : "walkB";
@@ -540,7 +631,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       food: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#8a5a2b", c: "#c9925a" }),
       water: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#6f9cc4", c: "#bfe3fb" }),
     };
-    return { cats, bowls, owner, pour, churu: toPaths(CHURU_ICON, OWNER_PALETTE) };
+    return { cats, bowls, owner, pour };
   }, []);
 
   useEffect(() => {
@@ -575,6 +666,10 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       bowls,
     };
     window.dispatchEvent(new CustomEvent("docbox:bowls", { detail: { ...bowls } }));
+    // 개발할 때만: 장면을 강제로 재생해 볼 수 있게 열어 둔다 (운영에는 포함되지 않는다)
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __catWorld?: World }).__catWorld = worldRef.current;
+    }
     redraw();
 
     // 움직임을 줄여 달라고 설정한 기기에서는 가만히 있는다
@@ -684,7 +779,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
                     cat.heart = 0;
                     redraw();
                   }, 1500);
-                } else if (cat.state !== "jump" && cat.state !== "eat") {
+                } else if (!["jump", "eat", "stalk", "pounce", "zoom"].includes(cat.state)) {
                   jump(cat, "sit");
                 }
                 redraw();
@@ -731,21 +826,6 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
             </button>
           ))}
 
-          {/* 츄르 — 누르면 이윤이 주러 온다 */}
-          {world.owner.task !== "churu" && !world.owner.queue.includes("churu") && !stillRef.current && (
-            <button
-              type="button"
-              tabIndex={-1}
-              onClick={() => {
-                callOwner(world, width, "churu");
-                redraw();
-              }}
-              className="pointer-events-auto absolute bottom-0 cursor-pointer select-none bg-transparent p-1"
-              style={{ left: spots.water + BW + 10, width: 24, height: 24 }}
-            >
-              <Sprite paths={art.churu} w={8} h={8} width={16} height={16} />
-            </button>
-          )}
         </>
       )}
     </div>

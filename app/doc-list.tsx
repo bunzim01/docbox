@@ -379,12 +379,12 @@ export default function DocList({
           )}
 
           <div className="min-w-0 flex-1">
-            {atRoot && (
-              <p className="text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY DOCBOX</p>
+            {atRoot ? (
+              // 홈에서는 영어 이름만 (한글 '자료실' 제목은 뺐다)
+              <h1 className="text-xl font-bold tracking-[0.16em] text-gold">LIKEWAY DOCBOX</h1>
+            ) : (
+              <h1 className="truncate text-xl font-bold">{title}</h1>
             )}
-            <h1 className={`truncate font-bold ${atRoot ? "text-3xl leading-tight" : "text-xl"}`}>
-              {atRoot ? "자료실" : title}
-            </h1>
             {atRoot && (
               <p className="mt-0.5 text-base text-zinc-500">
                 문서 {documents.length}개 · 폴더 {folders.length}개

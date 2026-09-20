@@ -11,7 +11,7 @@ export const CAT_H = 18;
 
 export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
-  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB";
+  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB" | "crouchA" | "crouchB";
 
 export type CatKind = "taeri" | "jeri";
 
@@ -177,6 +177,46 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "..OPPPPPPPPPPPPOBBBWWWWWBBBO..",
       "..OPSPPSPPSPPPPOOOOOOOOOOOO...",
       "...OOOOOOOOOOOOO.............."
+    ],
+    "crouchA": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "...................OO.....OO..",
+      "..................OPIO...OIPO.",
+      ".....OOOOOOOOOOOOOOPPOOOOOPPO.",
+      "OOOOOHHHHHHHHHHHHOGGGSGMGSGGGO",
+      "OPSOBBYBBBYBBBYBBOGGKLGMGKLGGO",
+      ".OOOBBYBBBYBBBYBBOGGEEMNMEEGGO",
+      "...OBBBBBBBBBBBBBOBBBWWWWWBBBO",
+      "...OBBBBBBBBBBBBBOBBBWWWWWBBBO",
+      "....OOBOBOBOBBBBOBOOOOOOOOOOO.",
+      ".....OFOOOFOOOOOOFOOOFO.......",
+      ".....OOO.OOO....OOO.OOO......."
+    ],
+    "crouchB": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "...................OO.....OO..",
+      ".OOOOOOOOOOOOOOOOOOPIO...OIPO.",
+      "OPSOHHHHHHHHHHHHHHOPPOOOOOPPO.",
+      ".OOBBYBBBYBBBYBBBOGGGSGMGSGGGO",
+      "..OBBYBBBYBBBYBBBOGGKLGMGKLGGO",
+      "..OBBBBBBBBBBBBBBOGGEEMNMEEGGO",
+      "..OBBBBBBBBBBBBBBOBBBWWWWWBBBO",
+      "...OBBBBBBBBBBBBBOBBBWWWWWBBBO",
+      "....OBOOOBOOOOOOOBOOOOOOOOOOO.",
+      "....OFO.OFO.....OFO.OFO.......",
+      "....OOO.OOO.....OOO.OOO......."
     ],
     "eatA": [
       "..............................",
@@ -399,6 +439,46 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "..OPPPPPPPPPPPPBOBWWWWWBO.....",
       "..OPSPPSPPSPPPPOOOOWWWOO......",
       "...OOOOOOOOOOOOO...OOO........"
+    ],
+    "crouchA": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "...................O.......O..",
+      "..................OPO.....OPO.",
+      "..................OPIO...OIPO.",
+      "..................OPPOOOOOPPO.",
+      "..................OGGSGMGSGGO.",
+      "OOOOOOOOOOOOOOOOOOOGKLGMGKLGO.",
+      "OPSPOHHHHHHHHHHHHHOGEEMNMEEGO.",
+      ".OOOBBYBBBYBBBYBBBYOBWWWWWBO..",
+      "...OBBBBBBBBBBBBBBBBOOWWWOO...",
+      "....OOBOBOBOBBBBOBOWOBOOO.....",
+      ".....OFOOOFOOOOOOFOOOFO.......",
+      ".....OOO.OOO....OOO.OOO......."
+    ],
+    "crouchB": [
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "..............................",
+      "...................O.......O..",
+      "..................OPO.....OPO.",
+      "..................OPIO...OIPO.",
+      ".OOO..............OPPOOOOOPPO.",
+      "OPSPOOOOOOOOOOOOOOOGGSGMGSGGO.",
+      ".OOOHHHHHHHHHHHHHHOGKLGMGKLGO.",
+      "..OBBYBBBYBBBYBBBYOGEEMNMEEGO.",
+      "..OBBBBBBBBBBBBBBBBOBWWWWWBO..",
+      "...OBBBBBBBBBBBBBBWWOOWWWOO...",
+      "....OBOOOBOOOOOOOBOOOBOOO.....",
+      "....OFO.OFO.....OFO.OFO.......",
+      "....OOO.OOO.....OOO.OOO......."
     ],
     "eatA": [
       "..............................",

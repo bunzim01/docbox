@@ -27,9 +27,9 @@ function PixelIcon({ rows, palette, size }: { rows: string[]; palette: Record<st
 }
 
 const ITEMS: { kind: CareKind; label: string; rows: string[]; palette: Record<string, string>; size: number }[] = [
-  { kind: "food", label: "밥 주기", rows: BOWLS.food[3], palette: BOWL_PALETTES.food, size: 28 },
-  { kind: "water", label: "물 주기", rows: BOWLS.water[3], palette: BOWL_PALETTES.water, size: 28 },
-  { kind: "churu", label: "츄르 주기", rows: CHURU_ICON, palette: OWNER_PALETTE, size: 18 },
+  { kind: "food", label: "밥 주기", rows: BOWLS.food[3], palette: BOWL_PALETTES.food, size: 22 },
+  { kind: "water", label: "물 주기", rows: BOWLS.water[3], palette: BOWL_PALETTES.water, size: 22 },
+  { kind: "churu", label: "츄르 주기", rows: CHURU_ICON, palette: OWNER_PALETTE, size: 14 },
 ];
 
 /**
@@ -54,38 +54,24 @@ export default function CatCare() {
 
   const empty = { food: bowls?.food === 0, water: bowls?.water === 0 };
   const shown = ITEMS.filter((item) => item.kind === "churu" || empty[item.kind]);
-  const notice =
-    empty.food && empty.water
-      ? "밥그릇과 물그릇이 비었어요"
-      : empty.food
-        ? "밥그릇이 비었어요"
-        : empty.water
-          ? "물그릇이 비었어요"
-          : "";
 
   return (
-    <div className="mt-auto px-5 pt-8 motion-reduce:hidden">
-      <p className="mb-2 text-base font-semibold text-zinc-400">
-        태리 · 제리
-        {notice && <span className="ml-2 font-normal text-gold">{notice}</span>}
-      </p>
-      <div className="flex gap-2">
-        {shown.map((item) => (
-          <button
-            key={item.kind}
-            type="button"
-            onClick={() => careForCats(item.kind)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-base font-semibold shadow-[0_1px_2px_rgba(34,48,74,0.05)] sm:max-w-44 sm:py-2.5 ${
-              item.kind === "churu"
-                ? "border-zinc-200 bg-paper text-zinc-600 active:bg-zinc-100 sm:hover:bg-zinc-50"
-                : "border-gold/40 bg-gold-soft text-ink active:brightness-95 sm:hover:brightness-95"
-            }`}
-          >
-            <PixelIcon rows={item.rows} palette={item.palette} size={item.size} />
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="mt-auto flex justify-end gap-2 px-5 pt-6 motion-reduce:hidden">
+      {shown.map((item) => (
+        <button
+          key={item.kind}
+          type="button"
+          onClick={() => careForCats(item.kind)}
+          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-base ${
+            item.kind === "churu"
+              ? "border-zinc-200 bg-paper text-zinc-500 active:bg-zinc-100 sm:hover:bg-zinc-50"
+              : "border-gold/40 bg-gold-soft font-semibold text-ink active:brightness-95 sm:hover:brightness-95"
+          }`}
+        >
+          <PixelIcon rows={item.rows} palette={item.palette} size={item.size} />
+          {item.label}
+        </button>
+      ))}
     </div>
   );
 }
