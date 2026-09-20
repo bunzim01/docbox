@@ -109,12 +109,12 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "............OGGCCMNMCCGGO.....",
       "............OBBBWWWWWBBBO.....",
       "...........OOBBBWWWWWBBBO.....",
-      "..........OBBOOOOOOOOOOOFO....",
-      ".........OBBBBBBBWWWO.OFFO....",
-      "........OBBYBBBBBWWWWO.OBO....",
-      "........OBBBBBBBBBWWWO.OBO....",
-      "........OBBYBBBBBBBBBO........",
-      ".OOOOOOOOBBBBBBOBBOBBO........",
+      "..........OBBOOOOOOOOOOO......",
+      ".........OBBBBBBBWWWOOFFO.....",
+      "........OBBYBBBBBWWWWOFFO.....",
+      "........OBBBBBBBBBWWOBBO......",
+      "........OBBYBBBBBBBBOBO.......",
+      ".OOOOOOOOBBBBBBOBBOBOO........",
       "OPPSPPSPOFFFBBBOFFOFFO........",
       ".OOOOOOOOOOOOOOOOOOOOO........"
     ],
@@ -130,12 +130,12 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "............OGGCCMNMCCGGO.....",
       "...........OOBBBWWWWWBBBO.....",
       "..........OBOBBBWWTWWBBBO.....",
-      ".........OBBBOOOOOTOOOOOFO....",
-      "........OBBYBBBBBWWWWOOFFO....",
-      "........OBBBBBBBBBWWWO.OBO....",
-      "........OBBYBBBBBBBBBO.OBO....",
-      ".OOOOOOOOBBBBBBOBBOBBO........",
-      "OPPSPPSPOFFFBBBOFFOFFO........",
+      ".........OBBBOOOOOTOOOOO......",
+      "........OBBYBBBBBWWWWOFFO.....",
+      "........OBBBBBBBBBWWWOFFO.....",
+      "........OBBYBBBBBBBBOBBO......",
+      ".OOOOOOOOBBBBBBOBBOBOBO.......",
+      "OPPSPPSPOFFFBBBOFFOFOO........",
       ".OOOOOOOOOOOOOOOOOOOOO........"
     ],
     "stretch": [
@@ -370,12 +370,12 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "............OGGGGMGGGGO.......",
       "............OGCCMNMCCGO.......",
       ".............OBWWWWWBO........",
-      "............OBOOWWWOO.OO......",
-      "...........OBBYBOOO..OFFO.....",
-      "...........OBBBBWWWO.OFFO.....",
-      "..........OBYBBBWWWO..OBO.....",
-      "..........OBBBBBBWWO..OBO.....",
-      ".........OBBYBBBBBBO..........",
+      "............OBOOWWWOOO........",
+      "...........OBBYBOOOOFFO.......",
+      "...........OBBBBWWWOFFO.......",
+      "..........OBYBBBWWOBBO........",
+      "..........OBBBBBBWOBO.........",
+      ".........OBBYBBBBBOO..........",
       "..OOOOOOOOBBBBOBBOBO..........",
       ".OPPSPPSPOFFFBOFFOFFO.........",
       "..OOOOOOOOOOOOOOOOOOO........."
@@ -391,12 +391,12 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "............OGGGGMGGGGO.......",
       "............OGCCMNMCCGO.......",
       "............OOBWWWWWBO........",
-      "...........OBBOOWTWOO.OO......",
-      "...........OBBBBOTOO.OFFO.....",
-      "..........OBYBBBWWWO.OFFO.....",
-      "..........OBBBBBBWWO..OBO.....",
-      ".........OBBYBBBBBBO..OBO.....",
-      "..OOOOOOOOBBBBOBBOBO..........",
+      "...........OBBOOWTWOOO........",
+      "...........OBBBBOTOOFFO.......",
+      "..........OBYBBBWWWOFFO.......",
+      "..........OBBBBBBWOBBO........",
+      ".........OBBYBBBBBOBO.........",
+      "..OOOOOOOOBBBBOBBOOO..........",
       ".OPPSPPSPOFFFBOFFOFFO.........",
       "..OOOOOOOOOOOOOOOOOOO........."
     ],
@@ -838,4 +838,53 @@ export const CHURU_ICON: CatFrame = [
   ".OCCO...",
   "OCCO....",
   "OOO....."
+];
+
+/** 낚싯대 장난감 — 놀아줄 때 이윤이 흔든다 */
+export const TOY_W = 16;
+export const TOY_H = 12;
+export const TOY_FRAMES: Record<"toyA" | "toyB", CatFrame> = {
+  "toyA": [
+    "....S...........",
+    "....rS..........",
+    "....r.S.........",
+    "....r..S........",
+    "...fFf..S.......",
+    "..fFFFf..S......",
+    "...fFf....S.....",
+    "....f......S....",
+    "............S...",
+    ".............S..",
+    "..............S.",
+    "...............S"
+  ],
+  "toyB": [
+    "....S...........",
+    "...r.S..........",
+    "..r...S.........",
+    ".r.....S........",
+    "fFf.....S.......",
+    "FFFf.....S......",
+    "fFf.......S.....",
+    ".f.........S....",
+    "............S...",
+    ".............S..",
+    "..............S.",
+    "...............S"
+  ]
+};
+export const TOY_PALETTE: Record<string, string> = {
+  "S": "#8a5a2b",
+  "r": "#8a8175",
+  "F": "#ef6f8f",
+  "f": "#f9b3c4"
+};
+export const TOY_ICON: CatFrame = [
+  "..fFf.",
+  ".fFFFf",
+  "..fFf.",
+  "...r..",
+  "..r...",
+  ".r....",
+  "S....."
 ];

@@ -17,6 +17,10 @@ import {
   OWNER_PALETTE,
   OWNER_W,
   PALETTES,
+  TOY_FRAMES,
+  TOY_H,
+  TOY_PALETTE,
+  TOY_W,
   type BowlKind,
   type CatKind,
   type FrameName,
@@ -46,7 +50,7 @@ type State =
   | "stalk" // 사냥놀이: 납작 엎드려 엉덩이 씰룩
   | "pounce" // 크게 도약해 덮친다
   | "zoom"; // 우다다 — 끝에서 끝까지 전속력
-type Arrive = "watch" | "food" | "water" | "churu" | "beg";
+type Arrive = "watch" | "food" | "water" | "churu" | "beg" | "play";
 
 const HUNGRY = 1500; // 틱 (약 3분)
 const THIRSTY = 1900; // 틱 (약 4분)
@@ -73,13 +77,14 @@ type Cat = {
   inPlace?: boolean;
   watching?: boolean; // 올라온 파일 구경 중 (이때는 장난을 걸지 않는다)
   leap?: number; // 덮칠 때 한 틱에 나아가는 거리 (사냥감까지 닿도록 계산)
+  playing?: boolean; // 낚싯대 놀이 중
   margin?: number; // 우다다 때 벽 앞에서 돌아서는 거리 — 쫓는 애는 조금 일찍 돌아 뒤를 따라간다
 };
 
-type Task = BowlKind | "churu";
+type Task = BowlKind | "churu" | "play";
 
 type Owner = {
-  state: "away" | "walk" | "pour" | "give" | "wave" | "leave";
+  state: "away" | "walk" | "pour" | "give" | "play" | "wave" | "leave";
   x: number;
   dir: 1 | -1;
   ticks: number;
@@ -201,7 +206,7 @@ function jump(cat: Cat, then: State = "sit", inPlace = false) {
 /** 이윤이 그 일을 하러 서는 자리 — 그릇 오른쪽에 서서 왼쪽으로 팔을 뻗는다 */
 function ownerSpot(task: Task, width: number): number {
   const spots = places(width);
-  return task === "churu" ? spots.owner : spots[task] + 10;
+  return task === "churu" || task === "play" ? spots.owner : spots[task] + 10;
 }
 
 /**
@@ -256,7 +261,17 @@ function step(world: World, width: number) {
     if (Math.abs(owner.x - target) <= OWNER_SPEED) {
       owner.x = target;
       owner.dir = -1; // 일할 때는 왼쪽(그릇·고양이 쪽)을 본다
-      if (owner.task === "churu") {
+      if (owner.task === "play") {
+        owner.state = "play";
+        owner.ticks = 72;
+        owner.frame = 0;
+        // 낚싯대다! 깃털 아래로 달려온다 (태리가 앞, 제리가 뒤)
+        cats.forEach((cat, i) => {
+          cat.alert = 8;
+          cat.eating = undefined;
+          goTo(cat, owner.x - 14 - W * 0.78 - i * 42, 1, "play", true);
+        });
+      } else if (owner.task === "churu") {
         owner.state = "give";
         owner.ticks = 75;
         // 츄르다! 둘 다 달려온다 (자고 있어도 벌떡)
@@ -273,6 +288,43 @@ function step(world: World, width: number) {
       owner.dir = target > owner.x ? 1 : -1;
       owner.x += owner.dir * OWNER_SPEED;
       owner.frame += 1;
+    }
+  } else if (owner.state === "play") {
+    owner.ticks -= 1;
+    owner.frame += 1;
+    // 깃털을 향해 번갈아 폴짝
+    const players = cats.filter((c) => c.playing && c.state !== "jump");
+    if (owner.frame % 8 === 0 && players.length > 0) {
+      const who = players[Math.floor(owner.frame / 8) % players.length];
+      who.dir = 1;
+      if (Math.random() < 0.35) who.heart = 8;
+      jump(who, "wag", true);
+    }
+    if (owner.ticks <= 0) {
+      // 실컷 놀았다 — 신나서 우다다 한 바퀴
+      const laps = Math.round(rand(36, 52));
+      cats.forEach((cat, i) => {
+        if (!cat.playing) return;
+        cat.playing = false;
+        cat.watching = false;
+        cat.y = 0;
+        cat.heart = 14;
+        cat.dir = -1;
+        cat.state = "zoom";
+        cat.frame = 0;
+        cat.ticks = laps + i * 5;
+        cat.margin = i === 0 ? 0 : 62;
+      });
+      const nextTask = owner.queue.shift();
+      if (nextTask) {
+        owner.task = nextTask;
+        owner.state = "walk";
+      } else {
+        owner.task = undefined;
+        owner.state = "wave";
+        owner.ticks = 12;
+        owner.frame = 0;
+      }
     }
   } else if (owner.state === "pour" || owner.state === "give") {
     owner.ticks -= 1;
@@ -353,6 +405,11 @@ function step(world: World, width: number) {
             cat.state = "eat";
             cat.eating = "churu";
             cat.ticks = 400; // 이윤이 일어날 때까지
+          } else if (what === "play" && owner.state === "play") {
+            cat.playing = true;
+            cat.watching = true; // 놀이 중엔 서로 장난 걸지 않는다
+            cat.state = "wag";
+            cat.ticks = 400;
           } else if (what === "beg") {
             // 빈 그릇… 밥 주세요
             cat.state = "sit";
@@ -474,7 +531,7 @@ function step(world: World, width: number) {
   const awake = (c: Cat) =>
     c.goal === undefined && !c.watching && ["walk", "sit", "wag", "groom"].includes(c.state);
 
-  if (owner.task === "churu") return; // 츄르 시간엔 장난 금지
+  if (owner.task === "churu" || owner.task === "play") return; // 츄르·놀이 시간엔 따로 장난치지 않는다
 
   if (awake(a) && awake(b) && dist > W * 1.2 && dist < W * 2.6 && Math.random() < 0.012) {
     // 사냥놀이: 멀찍이서 납작 엎드려 엉덩이를 씰룩이다가 덮친다
@@ -572,6 +629,7 @@ function frameOf(cat: Cat): FrameName {
 
 function ownerFrame(owner: Owner): OwnerFrame {
   if (owner.state === "give" || owner.state === "pour") return "give";
+  if (owner.state === "play") return "wave";
   if (owner.state === "wave") return Math.floor(owner.frame / 3) % 2 === 0 ? "wave" : "stand";
   return Math.floor(owner.frame / 2) % 2 === 0 ? "walkA" : "walkB";
 }
@@ -631,7 +689,11 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       food: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#8a5a2b", c: "#c9925a" }),
       water: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#6f9cc4", c: "#bfe3fb" }),
     };
-    return { cats, bowls, owner, pour };
+    const toy = {
+      toyA: toPaths(TOY_FRAMES.toyA, TOY_PALETTE),
+      toyB: toPaths(TOY_FRAMES.toyB, TOY_PALETTE),
+    };
+    return { cats, bowls, owner, pour, toy };
   }, []);
 
   useEffect(() => {
@@ -687,7 +749,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       const kind = (e as CustomEvent<CareKind>).detail;
       const w = worldRef.current;
       if (!w) return;
-      if (kind !== "churu" && w.bowls[kind] > 0) return; // 아직 남아 있으면 안 채운다
+      if ((kind === "food" || kind === "water") && w.bowls[kind] > 0) return; // 아직 남아 있으면 안 채운다
       callOwner(w, boxRef.current?.clientWidth ?? 360, kind);
       redraw();
     };
@@ -747,7 +809,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
             >
               <Sprite
                 paths={
-                  world.owner.state === "pour" && world.owner.task && world.owner.task !== "churu"
+                  world.owner.state === "pour" && (world.owner.task === "food" || world.owner.task === "water")
                     ? art.pour[world.owner.task]
                     : art.owner[ownerFrame(world.owner)]
                 }
@@ -811,6 +873,27 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
               )}
             </button>
           ))}
+
+          {/* 낚싯대 — 이윤의 든 손에서 뻗어 나오고, 깃털은 고양이 머리 위에서 흔들린다 */}
+          {world.owner.state === "play" && (
+            <div
+              className="absolute"
+              style={{
+                left: world.owner.x + 10 - TOY_W * PX,
+                bottom: 24 + (Math.floor(world.owner.frame / 3) % 2 === 0 ? 0 : 2),
+                width: TOY_W * PX,
+                height: TOY_H * PX,
+              }}
+            >
+              <Sprite
+                paths={art.toy[Math.floor(world.owner.frame / 3) % 2 === 0 ? "toyA" : "toyB"]}
+                w={TOY_W}
+                h={TOY_H}
+                width={TOY_W * PX}
+                height={TOY_H * PX}
+              />
+            </div>
+          )}
 
           {/* 밥그릇·물그릇 — 고양이 앞에 놓인다. 누르면 가득 채워진다 */}
           {(["food", "water"] as BowlKind[]).map((kind) => (

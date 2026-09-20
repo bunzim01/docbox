@@ -22,6 +22,15 @@ const TAIL_UP = ["..OO..", ".OPPO.", "OPSO..", "OPPO..", ".OPSO.", "..OPPO", "..
 const TAIL_MID = [".OOO...", "OPSPO..", ".OOPPO.", "...OSPO", "....OPO", ".....OO"];
 const TAIL_BACK = ["OOOOOO.", "OPSPPSO", ".OOOOOO"];
 const TAIL_GROUND = [".OOOOOOOO", "OPPSPPSPP", ".OOOOOOOO"];
+// 그루밍용 앞발: 가슴에서 비스듬히 올라와 입 앞에 닿는다 (두 마리 공용)
+const J_PAW_UP = [
+  "..OO.",
+  ".OFFO",
+  ".OFFO",
+  "OBBO.",
+  "OBO..",
+  "OO...",
+];
 const PAW_UP = [".OO.", "OFFO", "OFFO", ".OBO", ".OBO"];
 const LEG_BACK = ["..OBO", ".OBO.", "OFO..", "OO..."];
 const LEG_FRONT = ["OBO..", ".OBO.", "..OFO", "...OO"];
@@ -143,8 +152,8 @@ const frames = {
     walkB: compose([TAIL_MID, 0, 4], [T_BODY, 2, 6], [LEG, 5, 13], [LEG_SHORT, 8, 13], [LEG_SHORT, 15, 13], [LEG, 18, 13], [T_HEAD, 17, 2]),
     sit: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [T_HEAD, 11, 0]),
     sitWag: compose([TAIL_UP, 3, 7], [T_SIT, 8, 7], [T_HEAD, 11, 0]),
-    groomA: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [PAW_UP, 22, 8], [T_HEAD_CLOSED, 12, 1]),
-    groomB: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [PAW_UP, 22, 9], [T_HEAD_LICK, 12, 2]),
+    groomA: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [T_HEAD_CLOSED, 12, 1], [J_PAW_UP, 20, 9]),
+    groomB: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [T_HEAD_LICK, 12, 2], [J_PAW_UP, 20, 10]),
     stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [T_HEAD_CLOSED, 17, 5]),
     sleep: compose([T_SLEEP, 0, 7], [T_HEAD_CLOSED, 15, 7]),
     crouchA: compose([TAIL_BACK, 0, 9], [T_BODY, 3, 8], [LEG_SHORT, 5, 14], [LEG_SHORT, 9, 14], [LEG_SHORT, 16, 14], [LEG_SHORT, 20, 14], [T_HEAD, 17, 6]),
@@ -158,8 +167,8 @@ const frames = {
     walkB: compose([TAIL_MID, 0, 6], [J_BODY, 2, 8], [LEG, 5, 13], [LEG_SHORT, 8, 13], [LEG_SHORT, 15, 13], [LEG, 18, 13], [J_HEAD, 18, 2]),
     sit: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [J_HEAD, 11, -1]),
     sitWag: compose([TAIL_UP, 4, 7], [J_SIT, 9, 7], [J_HEAD, 11, -1]),
-    groomA: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [PAW_UP, 21, 8], [J_HEAD_CLOSED, 12, 0]),
-    groomB: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [PAW_UP, 21, 9], [J_HEAD_LICK, 12, 1]),
+    groomA: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [J_PAW_UP, 18, 8], [J_HEAD_CLOSED, 12, 0]),
+    groomB: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [J_PAW_UP, 18, 9], [J_HEAD_LICK, 12, 1]),
     stretch: compose([TAIL_UP, 0, 0], [STRETCH, 0, 4], [J_HEAD_CLOSED, 18, 4]),
     sleep: compose([J_SLEEP, 0, 9], [J_HEAD_CLOSED, 15, 7]),
     crouchA: compose([TAIL_BACK, 0, 10], [J_BODY, 3, 10], [LEG_SHORT, 5, 14], [LEG_SHORT, 9, 14], [LEG_SHORT, 16, 14], [LEG_SHORT, 20, 14], [J_HEAD, 18, 5]),
@@ -277,6 +286,43 @@ const ownerPalette = {
 // 츄르 아이콘 (누르면 이윤이 츄르를 주러 온다)
 const churuIcon = ["......Oc", ".....OCc", "....OCCO", "...OCCO.", "..OCCO..", ".OCCO...", "OCCO....", "OOO....."];
 
+/* ---------- 낚싯대 장난감 (16x12칸) — 오른쪽 아래가 손잡이. A/B 를 번갈아 흔든다 ---------- */
+// 글자: S 막대  r 줄  F 깃털  f 깃털 끝
+const toy = {
+  // 손(오른쪽 아래)에서 막대가 왼쪽 위로 뻗고, 끝에서 줄이 내려와 깃털이 달린다
+  toyA: [
+    "....S...........",
+    "....rS..........",
+    "....r.S.........",
+    "....r..S........",
+    "...fFf..S.......",
+    "..fFFFf..S......",
+    "...fFf....S.....",
+    "....f......S....",
+    "............S...",
+    ".............S..",
+    "..............S.",
+    "...............S",
+  ],
+  // 줄이 왼쪽으로 흔들린 모습
+  toyB: [
+    "....S...........",
+    "...r.S..........",
+    "..r...S.........",
+    ".r.....S........",
+    "fFf.....S.......",
+    "FFFf.....S......",
+    "fFf.......S.....",
+    ".f.........S....",
+    "............S...",
+    ".............S..",
+    "..............S.",
+    "...............S",
+  ],
+};
+const toyPalette = { S: "#8a5a2b", r: "#8a8175", F: "#ef6f8f", f: "#f9b3c4" };
+const toyIcon = ["..fFf.", ".fFFFf", "..fFf.", "...r..", "..r...", ".r....", "S....."];
+
 /* ---------- 파일로 쓰기 ---------- */
 const body = `/**
  * 픽셀 고양이 도트 그림 (먼치킨 — 다리가 짧고 몸이 길다). 오른쪽을 보는 기준.
@@ -319,6 +365,13 @@ export const OWNER_H = ${OH};
 export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = ${JSON.stringify(owner, null, 2)};
 export const OWNER_PALETTE: Record<string, string> = ${JSON.stringify(ownerPalette, null, 2)};
 export const CHURU_ICON: CatFrame = ${JSON.stringify(churuIcon, null, 2)};
+
+/** 낚싯대 장난감 — 놀아줄 때 이윤이 흔든다 */
+export const TOY_W = 16;
+export const TOY_H = 12;
+export const TOY_FRAMES: Record<"toyA" | "toyB", CatFrame> = ${JSON.stringify(toy, null, 2)};
+export const TOY_PALETTE: Record<string, string> = ${JSON.stringify(toyPalette, null, 2)};
+export const TOY_ICON: CatFrame = ${JSON.stringify(toyIcon, null, 2)};
 `;
 fs.writeFileSync("lib/cat-sprites.ts", body);
 
