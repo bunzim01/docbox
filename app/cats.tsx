@@ -44,7 +44,10 @@ const OWNER_SPEED = 6.5; // 이윤 걸음 (한 틱에 px) — 너무 느리면 �
 
 type State =
   | "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump" | "eat";
-type Arrive = "watch" | "food" | "water" | "churu";
+type Arrive = "watch" | "food" | "water" | "churu" | "beg";
+
+const HUNGRY = 1500; // 틱 (약 3분)
+const THIRSTY = 1900; // 틱 (약 4분)
 
 type Cat = {
   kind: CatKind;
@@ -56,6 +59,7 @@ type Cat = {
   frame: number;
   heart: number; // 이름표·하트 표시 남은 틱
   alert: number; // 깜짝(!) 표시 남은 틱
+  ask: number; // 빈 그릇 앞에서 물음표(?) 표시 남은 틱
   hunger: number;
   thirst: number;
   then?: State; // 점프가 끝난 뒤 이어질 상태
@@ -112,6 +116,8 @@ function saveBowls(bowls: World["bowls"]) {
   } catch {
     // 저장이 막혀 있으면 다음에 열 때 가득 찬 상태로 시작할 뿐이다
   }
+  // 홈 화면의 [밥 주기 · 물 주기] 버튼은 그릇이 비었을 때만 나타난다
+  window.dispatchEvent(new CustomEvent("docbox:bowls", { detail: { ...bowls } }));
 }
 
 function goTo(cat: Cat, x: number, face: 1 | -1, arrive: Arrive, run = false) {
@@ -139,14 +145,16 @@ function next(cat: Cat, world: World, width: number) {
 
   // 배고프거나 목마르면 그릇으로 간다 (비어 있으면 포기)
   const spots = places(width);
-  if (cat.hunger > 320 && world.bowls.food > 0) {
-    const s = spotAt(cat, spots.food);
-    goTo(cat, s.x, s.face, "food");
-    return;
-  }
-  if (cat.thirst > 380 && world.bowls.water > 0) {
-    const s = spotAt(cat, spots.water);
-    goTo(cat, s.x, s.face, "water");
+  for (const kind of ["food", "water"] as BowlKind[]) {
+    const need = kind === "food" ? cat.hunger > HUNGRY : cat.thirst > THIRSTY;
+    if (!need) continue;
+    const s = spotAt(cat, spots[kind]);
+    // 그릇이 비어 있으면 가서 빈 그릇을 들여다보며 기다린다
+    goTo(cat, s.x, s.face, world.bowls[kind] > 0 ? kind : "beg");
+    if (world.bowls[kind] === 0) {
+      if (kind === "food") cat.hunger = HUNGRY - 500;
+      else cat.thirst = THIRSTY - 500;
+    }
     return;
   }
 
@@ -268,7 +276,7 @@ function step(world: World, width: number) {
         saveBowls(world.bowls);
         for (const cat of cats) {
           const need = kind === "food" ? cat.hunger : cat.thirst;
-          if (need > 90 && cat.goal === undefined && cat.state !== "eat") {
+          if (need > (kind === "food" ? HUNGRY : THIRSTY) * 0.35 && cat.goal === undefined && cat.state !== "eat") {
             cat.alert = 6;
             const s = spotAt(cat, spots[kind]);
             goTo(cat, s.x, s.face, kind, true);
@@ -313,6 +321,7 @@ function step(world: World, width: number) {
   for (const cat of cats) {
     if (cat.heart > 0) cat.heart -= 1;
     if (cat.alert > 0) cat.alert -= 1;
+    if (cat.ask > 0) cat.ask -= 1;
     cat.hunger += 1;
     cat.thirst += 1;
 
@@ -334,6 +343,11 @@ function step(world: World, width: number) {
             cat.state = "eat";
             cat.eating = "churu";
             cat.ticks = 400; // 이윤이 일어날 때까지
+          } else if (what === "beg") {
+            // 빈 그릇… 밥 주세요
+            cat.state = "sit";
+            cat.ask = 26;
+            cat.ticks = 30;
           } else if ((what === "food" || what === "water") && world.bowls[what] > 0) {
             cat.state = "eat";
             cat.eating = what;
@@ -548,9 +562,9 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     }
 
     const cat = (kind: CatKind, x: number, dir: 1 | -1, state: State, ticks: number): Cat => ({
-      kind, x, y: 0, dir, state, ticks, frame: 0, heart: 0, alert: 0,
-      hunger: Math.round(rand(120, 300)),
-      thirst: Math.round(rand(60, 260)),
+      kind, x, y: 0, dir, state, ticks, frame: 0, heart: 0, alert: 0, ask: 0,
+      hunger: Math.round(rand(HUNGRY - 900, HUNGRY - 300)),
+      thirst: Math.round(rand(THIRSTY - 1400, THIRSTY - 500)),
     });
     worldRef.current = {
       cats: [
@@ -560,6 +574,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
       owner: { state: "away", x: width + 6, dir: -1, ticks: 0, frame: 0, heart: 0, queue: [] },
       bowls,
     };
+    window.dispatchEvent(new CustomEvent("docbox:bowls", { detail: { ...bowls } }));
     redraw();
 
     // 움직임을 줄여 달라고 설정한 기기에서는 가만히 있는다
@@ -575,8 +590,10 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     // 홈 화면의 [밥 주기 · 물 주기 · 츄르 주기] 버튼
     const onCare = (e: Event) => {
       const kind = (e as CustomEvent<CareKind>).detail;
-      if (!worldRef.current) return;
-      callOwner(worldRef.current, boxRef.current?.clientWidth ?? 360, kind);
+      const w = worldRef.current;
+      if (!w) return;
+      if (kind !== "churu" && w.bowls[kind] > 0) return; // 아직 남아 있으면 안 채운다
+      callOwner(w, boxRef.current?.clientWidth ?? 360, kind);
       redraw();
     };
     window.addEventListener("docbox:care", onCare);
@@ -606,8 +623,8 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     if (stillRef.current) {
       world.bowls[kind] = FULL;
       saveBowls(world.bowls);
-    } else {
-      callOwner(world, width, kind);
+    } else if (world.bowls[kind] === 0) {
+      callOwner(world, width, kind); // 비었을 때만 채워준다
     }
     redraw();
   }
@@ -685,6 +702,9 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
               />
               {cat.state === "sleep" && (
                 <span className="cat-zzz absolute -top-3 right-1 text-xs font-bold text-zinc-400">z</span>
+              )}
+              {cat.ask > 0 && cat.alert === 0 && (
+                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-base font-black text-zinc-500">?</span>
               )}
               {cat.alert > 0 && (
                 <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-base font-black text-gold">!</span>
