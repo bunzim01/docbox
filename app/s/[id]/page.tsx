@@ -43,7 +43,7 @@ export default async function SharePage({ params }: Params) {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
-      <p className="px-5 pt-6 text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY COMPANY</p>
+      <p className="px-5 pt-6 text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY DOCBOX</p>
       <header className="flex items-start gap-3 px-5 pb-4 pt-2">
         <FileIcon fileType={doc.file_type} className="mt-0.5 h-12 w-10 shrink-0" />
         <div className="min-w-0">

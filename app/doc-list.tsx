@@ -194,29 +194,20 @@ export default function DocList({
 
   const atRoot = !openFolder && !searching;
   const uploadHref = openFolder && !inNoFolder ? `/upload?f=${openFolder}` : "/upload";
-  /** 첫 화면 '바로 보내기' — 즐겨찾기 먼저, 그다음 많이 보낸 순 */
+  /** 첫 화면 '즐겨찾기' — 내가 ★ 표시한 문서만 (많이 보낸 순) */
   const quick = useMemo(
     () =>
       documents
-        .filter((d) => d.is_favorite || d.sent_count > 0)
+        .filter((d) => d.is_favorite)
         .sort(
           (a, b) =>
-            Number(b.is_favorite) - Number(a.is_favorite) ||
             b.sent_count - a.sent_count ||
-            (b.last_sent_at ?? "").localeCompare(a.last_sent_at ?? ""),
+            a.title.localeCompare(b.title, "ko", { numeric: true }),
         )
         .slice(0, 8),
     [documents],
   );
-  /** 아직 보낸 적도 즐겨찾기도 없으면 최근 올린 문서를 보여준다 */
-  const recent = useMemo(
-    () =>
-      [...documents]
-        .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
-        .slice(0, 5),
-    [documents],
-  );
-  const homeList = quick.length > 0 ? quick : recent;
+  const homeList = quick;
 
   // 자주 보내는 파일은 미리 받아 둔다 → 누르는 즉시 공유창
   useEffect(() => {
@@ -362,8 +353,12 @@ export default function DocList({
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col pb-28 sm:pb-8">
-      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-cream/95 px-5 pb-3 pt-3 backdrop-blur">
-        <div className="mb-2 flex items-center gap-2">
+      <header
+        className={`sticky top-0 z-10 border-b border-zinc-200 bg-cream/95 px-5 pb-3 backdrop-blur ${
+          atRoot ? "pt-6" : "pt-3"
+        }`}
+      >
+        <div className={`flex items-center gap-2 ${atRoot ? "mb-3" : "mb-2"}`}>
           {(openFolder || searching) && (
             <button
               type="button"
@@ -381,9 +376,16 @@ export default function DocList({
 
           <div className="min-w-0 flex-1">
             {atRoot && (
-              <p className="text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY COMPANY</p>
+              <p className="text-base font-semibold tracking-[0.18em] text-gold">LIKEWAY DOCBOX</p>
             )}
-            <h1 className="truncate text-xl font-bold">{title}</h1>
+            <h1 className={`truncate font-bold ${atRoot ? "text-3xl leading-tight" : "text-xl"}`}>
+              {atRoot ? "자료실" : title}
+            </h1>
+            {atRoot && (
+              <p className="mt-0.5 text-base text-zinc-500">
+                문서 {documents.length}개 · 폴더 {folders.length}개
+              </p>
+            )}
             {path.length > 1 && !searching && (
               <p className="truncate text-base text-zinc-400">
                 <button type="button" onClick={() => goFolder(null)} className="underline">
@@ -405,9 +407,11 @@ export default function DocList({
             )}
           </div>
 
-          <span className="shrink-0 text-base text-zinc-400">
-            {searching ? `${shown.length}개` : `${scoped.length}개`}
-          </span>
+          {!atRoot && (
+            <span className="shrink-0 text-base text-zinc-400">
+              {searching ? `${shown.length}개` : `${scoped.length}개`}
+            </span>
+          )}
 
           {!searching && !inNoFolder && path.length < MAX_FOLDER_DEPTH && (
             <button
@@ -431,13 +435,27 @@ export default function DocList({
           )}
         </div>
 
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="제목·태그·메모 검색 (폴더 상관없이 전체)"
-          className="w-full rounded-xl border border-zinc-200 bg-paper px-4 py-3.5 text-lg outline-none placeholder:text-zinc-400 focus:border-gold focus:ring-2 focus:ring-gold/30 sm:py-2.5"
-        />
+        <div className="relative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400"
+          >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="M16 16l4.5 4.5" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="전체 검색 · 초성도 됩니다 (ㅅㄷㅅ)"
+            className="w-full rounded-2xl border border-zinc-200 bg-paper py-3.5 pl-12 pr-4 text-lg shadow-[0_1px_2px_rgba(34,48,74,0.04)] outline-none placeholder:text-zinc-400 focus:border-gold focus:ring-2 focus:ring-gold/30 sm:py-2.5"
+          />
+        </div>
 
         {/* 폰: 태그(왼쪽, 옆으로 밀기)와 정렬·선택(오른쪽)을 한 줄에 */}
         {!atRoot && (tagsHere.length > 0 || scoped.length > 0) && (
@@ -532,14 +550,19 @@ export default function DocList({
         onNotify={setToast}
       />
 
+      {atRoot && homeList.length === 0 && documents.length > 0 && (
+        <p className="px-5 pt-6 text-base leading-relaxed text-zinc-400 sm:hidden">
+          <span className="text-gold">★</span> 자주 보내는 문서는 ⋯ → 즐겨찾기 해두세요.
+          <br />
+          여기에 카톡 버튼과 함께 나타납니다.
+        </p>
+      )}
+
       {atRoot ? (
         homeList.length > 0 && (
           <>
             <h2 className="border-t border-zinc-100 px-5 pb-1 pt-5 text-base font-semibold text-zinc-400">
-              {quick.length > 0 ? "바로 보내기" : "최근 올린 문서"}
-              {quick.length > 0 && (
-                <span className="ml-2 font-normal text-zinc-400">★ 즐겨찾기 · 자주 보낸 문서</span>
-              )}
+              <span className="text-gold">★</span> 즐겨찾기
             </h2>
             <ul className="divide-y divide-zinc-100">
               {homeList.map((doc) => (
@@ -906,7 +929,7 @@ function FolderSection({
                 ))}
               </span>
               {(counts.get(folder.id) ?? 0) > 0 && (
-                <span className="text-base text-zinc-400">{counts.get(folder.id)}</span>
+                <span className="text-base text-zinc-400">{counts.get(folder.id)}개</span>
               )}
             </button>
           ))}
