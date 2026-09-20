@@ -870,6 +870,88 @@ export const PILLOW: CatFrame = [
   "OZZZZZZO",
   ".OOOOOO."
 ];
+
+/** 밥·물을 따라 주는 모습 — 기울인 사료 봉지 / 생수병과 떨어지는 줄기 */
+export const POUR_W = 16;
+export const POUR_H = 17;
+export const POUR_FRAMES: Record<"foodA" | "foodB" | "waterA" | "waterB", CatFrame> =
+  {
+  "foodA": [
+    "...OOOOOOO......",
+    "..OKKKKKKKO.....",
+    "..OKKKKKKKO.....",
+    "..OKkkkkkKO.....",
+    "..OKkddkkKO.....",
+    "..OKkkkkkKO.....",
+    "..OKKKKKKKO.....",
+    "..OKKKKKKKO.....",
+    "...OKKKKKO......",
+    "....OKKKO.......",
+    ".....OOO........",
+    "....d..d........",
+    ".....d..........",
+    "....d.d........."
+  ],
+  "foodB": [
+    "...OOOOOOO......",
+    "..OKKKKKKKO.....",
+    "..OKKKKKKKO.....",
+    "..OKkkkkkKO.....",
+    "..OKkddkkKO.....",
+    "..OKkkkkkKO.....",
+    "..OKKKKKKKO.....",
+    "..OKKKKKKKO.....",
+    "...OKKKKKO......",
+    "....OKKKO.......",
+    ".....OOO........",
+    ".....d.d........",
+    "....d...........",
+    ".....d.d........"
+  ],
+  "waterA": [
+    "...PPPPPP.......",
+    "..PQqqqqQP......",
+    "..PQqqqqQP......",
+    "..PQwwwwQP......",
+    "..PQwwwwQP......",
+    "..PQqqqqQP......",
+    "..PQqqqqQP......",
+    "...PQqqQP.......",
+    "....PqqP........",
+    "....PqqP........",
+    ".....PP.........",
+    ".....b..........",
+    ".....b..........",
+    "....b..........."
+  ],
+  "waterB": [
+    "...PPPPPP.......",
+    "..PQqqqqQP......",
+    "..PQqqqqQP......",
+    "..PQwwwwQP......",
+    "..PQwwwwQP......",
+    "..PQqqqqQP......",
+    "..PQqqqqQP......",
+    "...PQqqQP.......",
+    "....PqqP........",
+    "....PqqP........",
+    ".....PP.........",
+    ".....b..........",
+    "....b...........",
+    "....b..........."
+  ]
+};
+export const POUR_PALETTE: Record<string, string> = {
+  "O": "#6b4a25",
+  "K": "#c98f4e",
+  "k": "#f0dcc0",
+  "d": "#7a4a18",
+  "P": "#4d86b8",
+  "Q": "#eaf6ff",
+  "q": "#8ccdf2",
+  "w": "#ffffff",
+  "b": "#7cc4ef"
+};
 export const NAP_ICON: CatFrame = [
   "..OOOO..",
   ".OZzzZO.",

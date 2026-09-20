@@ -18,6 +18,10 @@ import {
   PILLOW,
   PILLOW_H,
   PILLOW_W,
+  POUR_FRAMES,
+  POUR_H,
+  POUR_PALETTE,
+  POUR_W,
   OWNER_H,
   OWNER_NAME,
   OWNER_PALETTE,
@@ -48,6 +52,8 @@ const BW = BOWL_W * PX;
 const BH = BOWL_H * PX;
 const NW = NAP_W * PX;
 const NH = NAP_H * PX;
+const UW = POUR_W * PX;
+const UH = POUR_H * PX;
 const TICK = 130; // ms — 일부러 뚝뚝 끊기는 도트 느낌
 const FULL = 3; // 그릇이 가득 찬 정도
 const STORE = "docbox-bowls";
@@ -302,7 +308,7 @@ function step(world: World, width: number) {
         });
       } else {
         owner.state = "pour";
-        owner.ticks = 12;
+        owner.ticks = 26;
       }
     } else {
       owner.dir = target > owner.x ? 1 : -1;
@@ -731,10 +737,12 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
     }
     const owner = {} as Record<string, [string, string][]>;
     for (const [name, rows] of Object.entries(OWNER_FRAMES)) owner[name] = toPaths(rows, OWNER_PALETTE);
-    // 손에 든 것만 색을 바꾼다: 사료 봉지(갈색) · 물병(하늘색)
+    // 따라 주는 것: 사료 봉지 · 생수병 (두 장을 번갈아 보여 주면 알갱이·물이 떨어진다)
     const pour = {
-      food: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#8a5a2b", c: "#c9925a" }),
-      water: toPaths(OWNER_FRAMES.give, { ...OWNER_PALETTE, C: "#6f9cc4", c: "#bfe3fb" }),
+      foodA: toPaths(POUR_FRAMES.foodA, POUR_PALETTE),
+      foodB: toPaths(POUR_FRAMES.foodB, POUR_PALETTE),
+      waterA: toPaths(POUR_FRAMES.waterA, POUR_PALETTE),
+      waterB: toPaths(POUR_FRAMES.waterB, POUR_PALETTE),
     };
     const toy = {
       toyA: toPaths(TOY_FRAMES.toyA, TOY_PALETTE),
@@ -874,12 +882,7 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
               ) : (
                 <>
                   <Sprite
-                    paths={
-                      world.owner.state === "pour" &&
-                      (world.owner.task === "food" || world.owner.task === "water")
-                        ? art.pour[world.owner.task]
-                        : art.owner[ownerFrame(world.owner)]
-                    }
+                    paths={art.owner[ownerFrame(world.owner)]}
                     w={OWNER_W}
                     h={OWNER_H}
                     width={OW}
@@ -960,6 +963,31 @@ export default function Cats({ hidden }: { hidden?: boolean }) {
               )}
             </button>
           ))}
+
+          {/* 사료 봉지 · 생수병 — 그릇 위에서 기울여 따른다 */}
+          {world.owner.state === "pour" &&
+            (world.owner.task === "food" || world.owner.task === "water") && (
+              <div
+                className="absolute"
+                style={{ left: spots[world.owner.task] + 2, bottom: 6, width: UW, height: UH }}
+              >
+                <Sprite
+                  paths={
+                    art.pour[
+                      `${world.owner.task}${Math.floor(world.owner.ticks / 3) % 2 === 0 ? "A" : "B"}` as
+                        | "foodA"
+                        | "foodB"
+                        | "waterA"
+                        | "waterB"
+                    ]
+                  }
+                  w={POUR_W}
+                  h={POUR_H}
+                  width={UW}
+                  height={UH}
+                />
+              </div>
+            )}
 
           {/* 낚싯대 — 이윤의 든 손에서 뻗어 나오고, 깃털은 고양이 머리 위에서 흔들린다 */}
           {world.owner.state === "play" && (

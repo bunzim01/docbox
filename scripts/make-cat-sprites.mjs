@@ -351,6 +351,49 @@ const toy = {
 const toyPalette = { S: "#8a5a2b", r: "#8a8175", F: "#ef6f8f", f: "#f9b3c4" };
 const toyIcon = ["..fFf.", ".fFFFf", "..fFf.", "...r..", "..r...", ".r....", "S....."];
 
+/* ---------- 따라 주는 것: 사료 봉지 · 생수병 (14x14, 기울여 따르는 모습) ---------- */
+// K 봉지  k 봉지 라벨  d 사료 알갱이  Q 병  q 물  c 뚜껑  b 물줄기
+const POUR_W = 16, POUR_H = 17;
+const kibble = (a, b, c) => [a, b, c];
+const bag = (drop) => pad([
+  "...OOOOOOO",
+  "..OKKKKKKKO",
+  "..OKKKKKKKO",
+  "..OKkkkkkKO",
+  "..OKkddkkKO",
+  "..OKkkkkkKO",
+  "..OKKKKKKKO",
+  "..OKKKKKKKO",
+  "...OKKKKKO",
+  "....OKKKO",
+  ".....OOO",
+  ...drop,
+], POUR_W);
+const bottle = (drop) => pad([
+  "...PPPPPP",
+  "..PQqqqqQP",
+  "..PQqqqqQP",
+  "..PQwwwwQP",
+  "..PQwwwwQP",
+  "..PQqqqqQP",
+  "..PQqqqqQP",
+  "...PQqqQP",
+  "....PqqP",
+  "....PqqP",
+  ".....PP",
+  ...drop,
+], POUR_W);
+const pourFrames = {
+  foodA: bag(kibble("....d..d", ".....d..", "....d.d.", "")),
+  foodB: bag(kibble(".....d.d", "....d...", ".....d.d", "")),
+  waterA: bottle(kibble(".....b", ".....b", "....b", "....b")),
+  waterB: bottle(kibble(".....b", "....b", "....b", ".....b")),
+};
+const pourPalette = {
+  O: "#6b4a25", K: "#c98f4e", k: "#f0dcc0", d: "#7a4a18",
+  P: "#4d86b8", Q: "#eaf6ff", q: "#8ccdf2", w: "#ffffff", b: "#7cc4ef",
+};
+
 /* ---------- 파일로 쓰기 ---------- */
 const body = `/**
  * 픽셀 고양이 도트 그림 (먼치킨 — 다리가 짧고 몸이 길다). 오른쪽을 보는 기준.
@@ -401,6 +444,13 @@ export const OWNER_NAP: CatFrame = ${JSON.stringify(O_NAP, null, 2)};
 export const PILLOW_W = ${PILLOW_W};
 export const PILLOW_H = ${PILLOW_H};
 export const PILLOW: CatFrame = ${JSON.stringify(PILLOW, null, 2)};
+
+/** 밥·물을 따라 주는 모습 — 기울인 사료 봉지 / 생수병과 떨어지는 줄기 */
+export const POUR_W = ${POUR_W};
+export const POUR_H = ${POUR_H};
+export const POUR_FRAMES: Record<"foodA" | "foodB" | "waterA" | "waterB", CatFrame> =
+  ${JSON.stringify(pourFrames, null, 2)};
+export const POUR_PALETTE: Record<string, string> = ${JSON.stringify(pourPalette, null, 2)};
 export const NAP_ICON: CatFrame = ${JSON.stringify([
   "..OOOO..",
   ".OZzzZO.",
