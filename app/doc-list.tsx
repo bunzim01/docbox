@@ -407,7 +407,7 @@ export default function DocList({
             )}
           </div>
 
-          {!atRoot && (
+          {!atRoot && (searching || scoped.length > 0) && (
             <span className="shrink-0 text-base text-zinc-400">
               {searching ? `${shown.length}개` : `${scoped.length}개`}
             </span>
@@ -478,7 +478,6 @@ export default function DocList({
       {!searching && !inNoFolder && (
         <FolderSection
           folders={children}
-          counts={counts}
           noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
           canAdd={path.length < MAX_FOLDER_DEPTH}
           onAdd={() => setNewFolderOpen(true)}
@@ -503,7 +502,6 @@ export default function DocList({
         docs={atRoot ? [] : sorted}
         folders={folders}
         folderRows={searching || inNoFolder ? [] : children}
-        folderCounts={counts}
         noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
         onOpenNoFolder={() => goFolder(NO_FOLDER)}
         onOpenFolder={goFolder}
@@ -844,7 +842,6 @@ function TrashView({
 
 function FolderSection({
   folders,
-  counts,
   noFolderCount,
   canAdd,
   onAdd,
@@ -856,7 +853,6 @@ function FolderSection({
   onDelete,
 }: {
   folders: Folder[];
-  counts: Map<string, number>;
   noFolderCount: number;
   canAdd: boolean;
   onAdd: () => void;
@@ -891,7 +887,7 @@ function FolderSection({
         <ul className="mt-2 sm:hidden">
           {folders.map((folder) => (
             <li key={folder.id} className="flex items-center gap-3 px-5 py-3.5">
-              <FolderIcon className="h-8 w-9 shrink-0" />
+              <FolderIcon className="h-8 w-[38px] shrink-0" />
               <input
                 defaultValue={folder.name}
                 onBlur={(e) => {
@@ -920,7 +916,7 @@ function FolderSection({
               onClick={() => onOpen(folder.id)}
               className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-200 bg-paper px-1 py-4 shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:py-3 sm:hover:bg-zinc-50"
             >
-              <FolderIcon className="h-10 w-11" />
+              <FolderIcon className="h-11 w-[52px] drop-shadow-[0_2px_3px_rgba(169,124,47,0.25)]" />
               <span className="text-center text-base font-semibold leading-tight">
                 {folderNameLines(folder.name).map((line) => (
                   <span key={line} className="block">
@@ -928,9 +924,6 @@ function FolderSection({
                   </span>
                 ))}
               </span>
-              {(counts.get(folder.id) ?? 0) > 0 && (
-                <span className="text-base text-zinc-400">{counts.get(folder.id)}개</span>
-              )}
             </button>
           ))}
 
@@ -940,11 +933,10 @@ function FolderSection({
               onClick={() => onOpen(NO_FOLDER)}
               className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-200 bg-paper px-1 py-4 shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:py-3 sm:hover:bg-zinc-50"
             >
-              <FolderIcon className="h-10 w-11" />
+              <FolderIcon className="h-11 w-[52px] drop-shadow-[0_2px_3px_rgba(169,124,47,0.25)]" />
               <span className="text-center text-base font-semibold leading-tight text-zinc-500">
                 분류 안 함
               </span>
-              <span className="text-base text-zinc-400">{noFolderCount}</span>
             </button>
           )}
 
@@ -960,7 +952,6 @@ function DocRows({
   docs,
   folders,
   folderRows,
-  folderCounts,
   noFolderCount,
   onOpenNoFolder,
   onOpenFolder,
@@ -983,7 +974,6 @@ function DocRows({
   docs: DocView[];
   folders: Folder[];
   folderRows: Folder[];
-  folderCounts: Map<string, number>;
   noFolderCount: number;
   onOpenNoFolder: () => void;
   onOpenFolder: (id: string) => void;
@@ -1024,13 +1014,8 @@ function DocRows({
             onClick={() => onOpenFolder(folder.id)}
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <FolderIcon className="h-6 w-7 shrink-0" />
+            <FolderIcon className="h-6 w-[29px] shrink-0" />
             <span className="truncate text-lg">{folder.name}</span>
-            {(folderCounts.get(folder.id) ?? 0) > 0 && (
-              <span className="shrink-0 text-base text-zinc-400">
-                {folderCounts.get(folder.id)}
-              </span>
-            )}
           </button>
 
           <button
@@ -1083,9 +1068,8 @@ function DocRows({
             onClick={onOpenNoFolder}
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <FolderIcon className="h-6 w-7 shrink-0" />
+            <FolderIcon className="h-6 w-[29px] shrink-0" />
             <span className="truncate text-lg text-zinc-500">분류 안 함</span>
-            <span className="shrink-0 text-base text-zinc-400">{noFolderCount}</span>
           </button>
           <span className="hidden w-32 shrink-0 text-right text-base text-zinc-400 md:block">
             폴더
@@ -1373,7 +1357,7 @@ function MoveSheet({
                 doc.folder_id === folder.id ? "font-bold" : ""
               }`}
             >
-              <FolderIcon className="h-6 w-7 shrink-0" />
+              <FolderIcon className="h-6 w-[29px] shrink-0" />
               <span className="flex-1 truncate">{folder.name}</span>
               {doc.folder_id === folder.id && <span className="text-base text-zinc-400">현재</span>}
             </button>
@@ -1385,7 +1369,7 @@ function MoveSheet({
             onClick={() => onPick(null)}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-lg text-zinc-500 active:bg-zinc-50 sm:py-2.5 sm:hover:bg-zinc-50"
           >
-            <FolderIcon className="h-6 w-7 shrink-0" />
+            <FolderIcon className="h-6 w-[29px] shrink-0" />
             <span className="flex-1">분류 안 함</span>
           </button>
         </li>
