@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { downloadFileName, fileUrl, getDocument } from "@/lib/documents";
-import { formatSize } from "@/lib/format";
+import { formatSize, isVideo } from "@/lib/format";
 import FileIcon from "@/app/file-icon";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +35,7 @@ export default async function SharePage({ params }: Params) {
   const viewUrl = fileUrl(doc.file_path);
   const downloadUrl = fileUrl(doc.file_path, name);
   const isPdf = (doc.file_type ?? "").toLowerCase() === "pdf";
+  const video = isVideo(doc.file_type);
   const officeUrl = ["ppt", "pptx", "doc", "docx", "xls", "xlsx"].includes(
     (doc.file_type ?? "").toLowerCase(),
   )
@@ -55,7 +56,24 @@ export default async function SharePage({ params }: Params) {
         </div>
       </header>
 
-      {isPdf ? (
+      {video ? (
+        <div className="px-5">
+          {/* 받는 사람이 앱 설치 없이 그 자리에서 본다 */}
+          <video
+            src={viewUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="w-full rounded-xl border border-zinc-200 bg-black shadow-sm"
+          />
+          <a
+            href={downloadUrl}
+            className="mt-4 block rounded-xl border border-zinc-300 bg-paper py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
+          >
+            다운로드
+          </a>
+        </div>
+      ) : isPdf ? (
         <>
           {/* PC·안드로이드는 브라우저 내장 뷰어로 바로 보인다 */}
           <iframe

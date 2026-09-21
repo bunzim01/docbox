@@ -21,6 +21,17 @@ export function formatSize(bytes: number | null): string {
   return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
 }
 
+/** 영상 파일 확장자 — 브라우저가 그 자리에서 재생할 수 있는 것들 */
+const VIDEO_EXTS = ["mp4", "mov", "m4v", "webm"];
+
+export function isVideo(fileType: string | null): boolean {
+  return VIDEO_EXTS.includes((fileType ?? "").toLowerCase());
+}
+
+/** 파일 고르기 창에서 받아 주는 확장자 (업로드 화면·PC 올리기 영역이 함께 쓴다) */
+export const ACCEPT_EXTS =
+  ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx," + VIDEO_EXTS.map((e) => "." + e).join(",");
+
 /** 파일 종류별 배지 (색 + 짧은 라벨) */
 export function fileBadge(fileType: string | null): { label: string; className: string } {
   const t = (fileType ?? "").toLowerCase();
@@ -28,6 +39,7 @@ export function fileBadge(fileType: string | null): { label: string; className: 
   if (t === "ppt" || t === "pptx") return { label: "PPT", className: "bg-orange-100 text-orange-700" };
   if (t === "doc" || t === "docx") return { label: "DOC", className: "bg-blue-100 text-blue-700" };
   if (t === "xls" || t === "xlsx") return { label: "XLS", className: "bg-emerald-100 text-emerald-700" };
+  if (isVideo(t)) return { label: "영상", className: "bg-violet-100 text-violet-700" };
   return { label: (t || "파일").toUpperCase().slice(0, 4), className: "bg-zinc-100 text-zinc-600" };
 }
 
@@ -173,10 +185,11 @@ export function matchesQuery(text: string, query: string): boolean {
 
 /**
  * 문서를 눌렀을 때 열 주소.
- * PDF 는 브라우저가 그 자리에서 보여주고, 그 밖의 문서(엑셀·워드·PPT·한글)는
- * 기기가 직접 열도록 제목이 붙은 파일 주소를 준다.
+ * PDF 와 영상은 브라우저가 그 자리에서 보여 주고(영상은 탭에서 바로 재생된다),
+ * 그 밖의 문서(엑셀·워드·PPT·한글)는 기기가 직접 열도록 제목이 붙은 파일 주소를 준다.
  * (오피스 온라인 뷰어는 열리기까지 10초가 넘게 걸려 안 열리는 것처럼 보였다)
  */
 export function viewUrl(doc: { fileUrl: string; downloadUrl: string; file_type: string | null }): string {
-  return (doc.file_type ?? "").toLowerCase() === "pdf" ? doc.fileUrl : doc.downloadUrl;
+  const t = (doc.file_type ?? "").toLowerCase();
+  return t === "pdf" || isVideo(t) ? doc.fileUrl : doc.downloadUrl;
 }

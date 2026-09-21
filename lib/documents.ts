@@ -10,6 +10,13 @@ export type Folder = {
 /** 폴더 깊이 제한 — 맨 위(1차) / 2차 / 3차 까지만 */
 export const MAX_FOLDER_DEPTH = 3;
 
+/**
+ * 파일 하나의 최대 크기 — Supabase 저장소가 정확히 50MB 까지만 받는다
+ * (51MB 를 올려 보면 "The object exceeded the maximum allowed size" 로 거부된다).
+ * 올리기 전에 여기서 걸러야 사용자가 한참 기다린 뒤에 실패하지 않는다.
+ */
+export const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
 export type DocView = Doc & { fileUrl: string; downloadUrl: string };
 
 /** 휴지통에 보관하는 기간 */

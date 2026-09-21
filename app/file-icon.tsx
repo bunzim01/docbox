@@ -1,4 +1,5 @@
 /** 파일 종류별 아이콘 — 탐색기처럼 문서 모양 + 종류 띠 */
+import { isVideo } from "@/lib/format";
 
 type Spec = { label: string; color: string };
 
@@ -9,6 +10,7 @@ function spec(fileType: string | null): Spec {
   if (t === "doc" || t === "docx") return { label: "DOC", color: "#2B6CB0" };
   if (t === "xls" || t === "xlsx") return { label: "XLS", color: "#2F9E44" };
   if (t === "hwp" || t === "hwpx") return { label: "HWP", color: "#0B7285" };
+  if (isVideo(t)) return { label: "영상", color: "#7048E8" };
   return { label: (t || "FILE").toUpperCase().slice(0, 4), color: "#71717A" };
 }
 
@@ -20,6 +22,7 @@ export default function FileIcon({
   className?: string;
 }) {
   const { label, color } = spec(fileType);
+  const video = isVideo(fileType);
 
   return (
     <svg viewBox="0 0 32 40" className={className} aria-label={label} role="img">
@@ -32,6 +35,8 @@ export default function FileIcon({
       />
       {/* 접힌 모서리 */}
       <path d="M20.5 1.5L29 10h-8.5z" fill="#e4e4e7" stroke="#d4d4d8" strokeWidth="1.5" />
+      {/* 영상은 종이 위에 재생 표시를 하나 더 둔다 */}
+      {video && <path d="M12 11.5l6.5 4-6.5 4z" fill={color} />}
       {/* 종류 띠 */}
       <rect x="1" y="21" width="27" height="13" rx="2.5" fill={color} />
       <text

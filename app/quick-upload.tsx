@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { extFromFileName, titleFromFileName } from "@/lib/format";
+import { MAX_FILE_BYTES } from "@/lib/documents";
+import { ACCEPT_EXTS, extFromFileName, formatSize, titleFromFileName } from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { discardUploadedFile, prepareUpload, saveDocument } from "./actions";
@@ -21,11 +22,17 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
   const [error, setError] = useState("");
 
   async function upload(files: FileList | File[]) {
-    const list = [...files];
+    const all = [...files];
+    // 저장소가 50MB 까지만 받는다 — 올리기 전에 걸러 준다
+    const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES);
+    const list = all.filter((f) => f.size <= MAX_FILE_BYTES);
+    if (tooBig.length) {
+      setError(`${tooBig.length}개가 ${formatSize(MAX_FILE_BYTES)}보다 커서 빠졌습니다.`);
+    }
     if (list.length === 0) return;
 
     setBusy(true);
-    setError("");
+    if (!tooBig.length) setError("");
     setTotal(list.length);
     setDone(0);
 
@@ -64,7 +71,7 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
 
     setBusy(false);
     setTotal(0);
-    if (failed === 0) setError("");
+    if (failed === 0 && !tooBig.length) setError("");
     if (failed < list.length) tellCats("upload");
     router.refresh();
   }
@@ -97,14 +104,14 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
               : "파일 올리기"}
         </span>
         <span className="mt-1 text-base text-zinc-400">
-          끌어다 놓거나 눌러서 선택하세요
+          끌어다 놓거나 눌러서 선택하세요 · 영상도 됩니다 (한 개당 {formatSize(MAX_FILE_BYTES)}까지)
         </span>
         {error && <span className="mt-2 text-base text-red-600">{error}</span>}
 
         <input
           type="file"
           multiple
-          accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx"
+          accept={ACCEPT_EXTS}
           className="hidden"
           disabled={busy}
           onChange={(e) => {

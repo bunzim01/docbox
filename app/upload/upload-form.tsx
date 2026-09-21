@@ -4,14 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions";
-import type { Folder } from "@/lib/documents";
-import { extFromFileName, flattenFolders, formatSize, parseTags, titleFromFileName } from "@/lib/format";
+import { MAX_FILE_BYTES, type Folder } from "@/lib/documents";
+import {
+  ACCEPT_EXTS,
+  extFromFileName,
+  flattenFolders,
+  formatSize,
+  parseTags,
+  titleFromFileName,
+} from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import BackIcon from "@/app/back-icon";
 import FileIcon from "@/app/file-icon";
 
-const ACCEPT = ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx";
+const ACCEPT = ACCEPT_EXTS;
 
 type Row = {
   file: File;
@@ -43,13 +50,19 @@ export default function UploadForm({
 
   function pickFiles(fileList: FileList | null) {
     if (!fileList) return;
-    const picked = [...fileList].map<Row>((file) => ({
-      file,
-      title: titleFromFileName(file.name),
-      state: "대기",
-    }));
+    const all = [...fileList];
+    // 저장소가 50MB 까지만 받는다 — 올리기 전에 걸러 준다 (영상은 여기 걸리기 쉽다)
+    const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES);
+    const picked = all
+      .filter((f) => f.size <= MAX_FILE_BYTES)
+      .map<Row>((file) => ({ file, title: titleFromFileName(file.name), state: "대기" }));
+
     setRows((prev) => [...prev, ...picked]);
-    setError("");
+    setError(
+      tooBig.length
+        ? `${tooBig.map((f) => f.name).join(", ")} — ${formatSize(MAX_FILE_BYTES)}보다 커서 올릴 수 없습니다.`
+        : "",
+    );
   }
 
   function onDrop(e: React.DragEvent) {
@@ -157,8 +170,11 @@ export default function UploadForm({
           {dragging ? "여기에 놓으세요" : "파일 선택"}
         </span>
         <span className="mt-1 text-base text-zinc-400">
-          PDF · PPT · DOC · XLS · HWP
+          PDF · PPT · DOC · XLS · HWP · 영상
           <span className="hidden sm:inline"> · 끌어다 놓아도 됩니다</span>
+        </span>
+        <span className="mt-1 text-base text-zinc-400">
+          한 개당 {formatSize(MAX_FILE_BYTES)}까지
         </span>
         <input
           type="file"
