@@ -16,6 +16,8 @@ import {
   matchesQuery,
   parseTags,
   viewUrl,
+  formatFeeRate,
+  parseFeeRate,
 } from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
 import { canShareFiles, copyShareLinks, prefetchForShare, shareFiles } from "@/lib/share";
@@ -577,6 +579,11 @@ export default function DocList({
                       {doc.is_favorite && <span className="text-gold">★ </span>}
                       {doc.title}
                     </span>
+                    {formatFeeRate(doc.fee_rate) && (
+                      <span className="mt-0.5 inline-block">
+                        <FeeRate value={doc.fee_rate} />
+                      </span>
+                    )}
                     <span className="block truncate text-base text-zinc-400">
                       {folderPath(folders, doc.folder_id)
                         .map((f) => f.name)
@@ -720,6 +727,7 @@ export default function DocList({
         <EditSheet
           doc={editing}
           pending={pending}
+          error={error}
           onClose={() => setEditing(null)}
           onSave={(input) =>
             run(async () => {
@@ -1118,6 +1126,7 @@ function DocRows({
                     {doc.title}
                   </a>
                 )}
+                <FeeRate value={doc.fee_rate} />
               </p>
 
               {doc.tags?.length > 0 && (
@@ -1380,20 +1389,35 @@ function MoveSheet({
   );
 }
 
+/** 수수료율 알약 — 파일명 옆에 작게. 값이 있을 때만 나온다 */
+function FeeRate({ value }: { value: number | null | undefined }) {
+  const text = formatFeeRate(value);
+  if (!text) return null;
+  return (
+    <span className="shrink-0 whitespace-nowrap rounded-full bg-gold-soft px-2 py-0.5 text-base font-semibold leading-tight text-gold">
+      {text}
+    </span>
+  );
+}
+
 function EditSheet({
   doc,
   pending,
+  error,
   onClose,
   onSave,
 }: {
   doc: DocView;
   pending: boolean;
+  /** 저장이 안 됐을 때 이유 — 창 뒤에 숨지 않게 창 안에서 보여 준다 */
+  error: string;
   onClose: () => void;
-  onSave: (input: { title: string; tags: string[]; memo: string }) => void;
+  onSave: (input: { title: string; tags: string[]; memo: string; feeRate: number | null }) => void;
 }) {
   const [title, setTitle] = useState(doc.title);
   const [tags, setTags] = useState((doc.tags ?? []).join(", "));
   const [memo, setMemo] = useState(doc.memo ?? "");
+  const [fee, setFee] = useState(doc.fee_rate === null || doc.fee_rate === undefined ? "" : String(doc.fee_rate));
 
   return (
     <Sheet title="문서 수정" onClose={onClose}>
@@ -1403,6 +1427,18 @@ function EditSheet({
         onChange={(e) => setTitle(e.target.value)}
         className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
       />
+
+      <label className="mb-1 block text-base text-zinc-500">수수료율 (%) — 안 쓰면 비워 두세요</label>
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
+          inputMode="decimal"
+          placeholder="예: 15"
+          className="w-32 rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
+        />
+        <span className="text-lg text-zinc-500">%</span>
+      </div>
 
       <label className="mb-1 block text-base text-zinc-500">태그 (쉼표로 구분)</label>
       <input
@@ -1420,6 +1456,12 @@ function EditSheet({
         className="mb-5 w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold"
       />
 
+      {error && (
+        <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-base leading-relaxed text-red-600">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -1431,7 +1473,7 @@ function EditSheet({
         <button
           type="button"
           disabled={pending}
-          onClick={() => onSave({ title, tags: parseTags(tags), memo })}
+          onClick={() => onSave({ title, tags: parseTags(tags), memo, feeRate: parseFeeRate(fee) })}
           className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-50 sm:py-2.5 sm:hover:bg-zinc-700"
         >
           {pending ? "저장 중…" : "저장"}

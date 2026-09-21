@@ -8,6 +8,14 @@ import { extFromFileName } from "@/lib/format";
 
 export type Result = { ok: true } | { ok: false; error: string };
 
+/** fee_rate 칸이 아직 없을 때 (supabase/fee-rate.sql 을 안 돌린 상태) */
+function noFeeRateColumn(error: { code?: string; message?: string } | null): boolean {
+  return !!error && (error.code === "42703" || /fee_rate/.test(error.message ?? ""));
+}
+
+const FEE_RATE_HINT =
+  "수수료율 칸이 아직 없습니다. Supabase SQL Editor 에서 supabase/fee-rate.sql 을 한 번 실행해 주세요.";
+
 /**
  * 업로드 1단계: 브라우저가 파일을 바로 올릴 수 있는 1회용 주소를 만든다.
  * 파일명은 추측할 수 없게 uuid 로 바꾼다.
@@ -36,6 +44,8 @@ export async function saveDocument(input: {
   tags: string[];
   memo: string;
   folderId: string | null;
+  /** 수수료율(%) — 안 쓰면 비워 둔다 */
+  feeRate?: number | null;
 }): Promise<Result> {
   await requireAuth();
 
@@ -43,7 +53,7 @@ export async function saveDocument(input: {
   if (!title) return { ok: false, error: "제목을 입력해 주세요." };
   if (!input.filePath) return { ok: false, error: "파일 경로가 없습니다." };
 
-  const { error } = await supabase().from("documents").insert({
+  const row = {
     title,
     file_path: input.filePath,
     file_type: input.fileType || null,
@@ -51,7 +61,19 @@ export async function saveDocument(input: {
     tags: input.tags,
     memo: input.memo.trim() || null,
     folder_id: input.folderId,
-  });
+  };
+
+  let { error } = await supabase()
+    .from("documents")
+    .insert({ ...row, fee_rate: input.feeRate ?? null });
+
+  // 수수료율 칸을 아직 안 만들었으면, 수수료율만 빼고 문서는 저장되게 한다
+  if (noFeeRateColumn(error)) {
+    ({ error } = await supabase().from("documents").insert(row));
+    if (!error && input.feeRate !== null && input.feeRate !== undefined) {
+      return { ok: false, error: FEE_RATE_HINT };
+    }
+  }
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/");
@@ -66,17 +88,25 @@ export async function discardUploadedFile(path: string): Promise<void> {
 
 export async function updateDocument(
   id: string,
-  input: { title: string; tags: string[]; memo: string },
+  input: { title: string; tags: string[]; memo: string; feeRate?: number | null },
 ): Promise<Result> {
   await requireAuth();
 
   const title = input.title.trim();
   if (!title) return { ok: false, error: "제목을 입력해 주세요." };
 
-  const { error } = await supabase()
+  const row = { title, tags: input.tags, memo: input.memo.trim() || null };
+
+  let { error } = await supabase()
     .from("documents")
-    .update({ title, tags: input.tags, memo: input.memo.trim() || null })
+    .update({ ...row, fee_rate: input.feeRate ?? null })
     .eq("id", id);
+
+  // 수수료율 칸이 아직 없으면 나머지는 저장하고 무엇을 해야 하는지 알려 준다
+  if (noFeeRateColumn(error)) {
+    ({ error } = await supabase().from("documents").update(row).eq("id", id));
+    if (!error) return { ok: false, error: FEE_RATE_HINT };
+  }
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/");

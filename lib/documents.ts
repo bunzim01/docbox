@@ -40,6 +40,8 @@ export type Doc = {
   last_sent_at: string | null;
   created_at: string;
   folder_id: string | null;
+  /** 수수료율(%) — 체크리스트 문서에 파일명 옆 알약으로 보여 준다. 비어 있으면 표시 안 함 */
+  fee_rate?: number | null;
   /** 휴지통에 들어간 시각. 비어 있으면 정상 문서 */
   deleted_at?: string | null;
 };

@@ -10,6 +10,7 @@ import {
   extFromFileName,
   flattenFolders,
   formatSize,
+  parseFeeRate,
   parseTags,
   titleFromFileName,
 } from "@/lib/format";
@@ -23,6 +24,8 @@ const ACCEPT = ACCEPT_EXTS;
 type Row = {
   file: File;
   title: string;
+  /** 수수료율(%) — 체크리스트 문서에만 쓴다. 파일마다 다르므로 줄마다 따로 받는다 */
+  fee: string;
   state: "대기" | "올리는 중" | "완료" | "실패";
   error?: string;
 };
@@ -55,7 +58,7 @@ export default function UploadForm({
     const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES);
     const picked = all
       .filter((f) => f.size <= MAX_FILE_BYTES)
-      .map<Row>((file) => ({ file, title: titleFromFileName(file.name), state: "대기" }));
+      .map<Row>((file) => ({ file, title: titleFromFileName(file.name), fee: "", state: "대기" }));
 
     setRows((prev) => [...prev, ...picked]);
     setError(
@@ -116,6 +119,7 @@ export default function UploadForm({
           tags: parsedTags,
           memo,
           folderId,
+          feeRate: parseFeeRate(row.fee),
         });
         if (!saved.ok) throw new Error(saved.error);
 
@@ -223,13 +227,27 @@ export default function UploadForm({
                 )}
               </div>
 
-              <input
-                value={row.title}
-                onChange={(e) => patch(i, { title: e.target.value })}
-                placeholder="제목"
-                disabled={busy}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
-              />
+              <div className="flex gap-2">
+                <input
+                  value={row.title}
+                  onChange={(e) => patch(i, { title: e.target.value })}
+                  placeholder="제목"
+                  disabled={busy}
+                  className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
+                />
+                {/* 수수료율 — 체크리스트가 아니면 비워 두면 된다 */}
+                <div className="flex shrink-0 items-center gap-1">
+                  <input
+                    value={row.fee}
+                    onChange={(e) => patch(i, { fee: e.target.value })}
+                    inputMode="decimal"
+                    placeholder="수수료"
+                    disabled={busy}
+                    className="w-24 rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
+                  />
+                  <span className="text-lg text-zinc-400">%</span>
+                </div>
+              </div>
 
               {row.error && <p className="mt-2 break-words text-base text-red-600">{row.error}</p>}
             </li>

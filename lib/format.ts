@@ -21,6 +21,27 @@ export function formatSize(bytes: number | null): string {
   return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
 }
 
+/**
+ * 수수료율 — 입력한 글을 숫자로 바꾼다.
+ * "15", "15%", "12.5" 모두 받는다. 비우면 null (표시 안 함).
+ * 0~100 을 벗어나면 잘못 친 것으로 보고 null 을 준다.
+ */
+export function parseFeeRate(input: string): number | null {
+  const t = input.replace(/[%\s]/g, "").trim();
+  if (!t) return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return Math.round(n * 100) / 100;
+}
+
+/** 15 → "15%", 12.5 → "12.5%" (소수점 뒤 0 은 떼고 보여 준다) */
+export function formatFeeRate(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  return `${Number(n.toFixed(2))}%`;
+}
+
 /** 영상 파일 확장자 — 브라우저가 그 자리에서 재생할 수 있는 것들 */
 const VIDEO_EXTS = ["mp4", "mov", "m4v", "webm"];
 
