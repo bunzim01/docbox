@@ -1114,7 +1114,12 @@ function DocRows({
             <FileIcon fileType={doc.file_type} className="h-10 w-8 shrink-0 sm:h-7 sm:w-[22px]" />
 
             <div className="min-w-0 flex-1">
-              <p className="flex items-start gap-1 font-semibold leading-snug text-zinc-900 sm:items-center sm:text-lg sm:font-normal">
+              {/*
+                제목 + 수수료·메모 알약을 한 줄에 두되 flex-wrap 으로 흘린다.
+                이름이 짧으면 알약이 이름 옆에 붙고, 길면 알약만 아랫줄로 내려간다.
+                (shrink-0 알약을 한 줄에 고정하면 긴 파일명이 잘려 버린다 — 실제로 잘렸다)
+              */}
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-semibold leading-snug text-zinc-900 sm:text-lg sm:font-normal">
                 {doc.is_favorite && <span className="text-gold">★</span>}
                 {selecting ? (
                   <span className="line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-1">{doc.title}</span>
@@ -1128,20 +1133,9 @@ function DocRows({
                     {doc.title}
                   </a>
                 )}
-                {/* PC 는 자리가 넉넉해서 이름 옆에 */}
-                <span className="hidden items-center gap-1 sm:flex">
-                  <FeeRate value={doc.fee_rate} />
-                  <NotePill text={doc.memo} />
-                </span>
+                <FeeRate value={doc.fee_rate} />
+                <NotePill text={doc.memo} />
               </p>
-
-              {/* 폰은 이름 옆에 붙이면 제목이 잘린다 — 바로 아랫줄에 */}
-              {(formatFeeRate(doc.fee_rate) || doc.memo?.trim()) && (
-                <p className="mt-1 flex items-center gap-1 sm:hidden">
-                  <FeeRate value={doc.fee_rate} />
-                  <NotePill text={doc.memo} />
-                </p>
-              )}
 
               {doc.tags?.length > 0 && (
                 <p className="mt-0.5 truncate text-base text-zinc-500 sm:hidden">
