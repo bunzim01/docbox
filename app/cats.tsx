@@ -63,8 +63,9 @@ type State =
   | "walk" | "run" | "sit" | "wag" | "groom" | "stretch" | "sleep" | "jump" | "eat"
   | "stalk" // 사냥놀이: 납작 엎드려 엉덩이 씰룩
   | "pounce" // 크게 도약해 덮친다
-  | "zoom"; // 우다다 — 끝에서 끝까지 전속력
-type Arrive = "watch" | "food" | "water" | "churu" | "beg" | "play" | "nap";
+  | "zoom" // 우다다 — 끝에서 끝까지 전속력
+  | "nuzzle"; // 쓰다듬 받는 중 — 눈 감고 손에 머리를 비빈다
+type Arrive = "watch" | "food" | "water" | "churu" | "beg" | "play" | "nap" | "pet";
 
 const HUNGRY = 1500; // 틱 (약 3분)
 const THIRSTY = 1900; // 틱 (약 4분)
@@ -92,14 +93,15 @@ type Cat = {
   watching?: boolean; // 올라온 파일 구경 중 (이때는 장난을 걸지 않는다)
   leap?: number; // 덮칠 때 한 틱에 나아가는 거리 (사냥감까지 닿도록 계산)
   playing?: boolean; // 낚싯대 놀이 중
+  petting?: boolean; // 이윤 손에 머리를 비비는 중
   napping?: boolean; // 이윤 옆에서 같이 낮잠 중
   margin?: number; // 우다다 때 벽 앞에서 돌아서는 거리 — 쫓는 애는 조금 일찍 돌아 뒤를 따라간다
 };
 
-type Task = BowlKind | "churu" | "play" | "nap";
+type Task = BowlKind | "churu" | "play" | "nap" | "pet";
 
 type Owner = {
-  state: "away" | "walk" | "pour" | "give" | "play" | "nap" | "wave" | "leave";
+  state: "away" | "walk" | "pour" | "give" | "play" | "nap" | "pet" | "wave" | "leave";
   x: number;
   dir: 1 | -1;
   ticks: number;
@@ -222,7 +224,7 @@ function jump(cat: Cat, then: State = "sit", inPlace = false) {
 function ownerSpot(task: Task, width: number): number {
   const spots = places(width);
   if (task === "nap") return Math.round(width / 2 - NW / 2); // 낮잠은 화면 한가운데
-  return task === "churu" || task === "play" ? spots.owner : spots[task] + 10;
+  return task === "churu" || task === "play" || task === "pet" ? spots.owner : spots[task] + 10;
 }
 
 /**
@@ -297,6 +299,15 @@ function step(world: World, width: number) {
           cat.eating = undefined;
           goTo(cat, owner.x - 14 - W * 0.78 - i * 42, 1, "play", true);
         });
+      } else if (owner.task === "pet") {
+        owner.state = "pet";
+        owner.ticks = 120;
+        owner.frame = 0;
+        // 쓰다듬어 준대! 둘 다 손 쪽으로 온다 (태리가 손 바로 앞, 제리가 뒤에)
+        cats.forEach((cat, i) => {
+          cat.eating = undefined;
+          goTo(cat, owner.x - W + 10 - i * 34, 1, "pet", true);
+        });
       } else if (owner.task === "churu") {
         owner.state = "give";
         owner.ticks = 75;
@@ -325,6 +336,36 @@ function step(world: World, width: number) {
         cat.state = "stretch"; // 잘 잤다
         cat.frame = 0;
         cat.ticks = Math.round(rand(12, 18));
+      });
+      const nextTask = owner.queue.shift();
+      if (nextTask) {
+        owner.task = nextTask;
+        owner.state = "walk";
+      } else {
+        owner.task = undefined;
+        owner.state = "wave";
+        owner.ticks = 12;
+        owner.frame = 0;
+      }
+    }
+  } else if (owner.state === "pet") {
+    owner.ticks -= 1;
+    owner.frame += 1;
+    // 기분 좋아서 이따금 하트가 뜬다
+    const petted = cats.filter((c) => c.petting);
+    if (owner.frame % 22 === 0 && petted.length > 0) {
+      const who = petted[Math.floor(owner.frame / 22) % petted.length];
+      who.heart = 16;
+    }
+    if (owner.ticks <= 0) {
+      cats.forEach((cat) => {
+        if (!cat.petting) return;
+        cat.petting = false;
+        cat.watching = false;
+        cat.heart = 20;
+        cat.state = "wag"; // 실컷 쓰다듬었다 — 기분 좋게 꼬리 살랑
+        cat.frame = 0;
+        cat.ticks = Math.round(rand(26, 40));
       });
       const nextTask = owner.queue.shift();
       if (nextTask) {
@@ -458,6 +499,11 @@ function step(world: World, width: number) {
             cat.watching = true; // 자는 동안엔 장난 금지
             cat.state = "sleep";
             cat.ticks = 400;
+          } else if (what === "pet" && (owner.state === "pet" || owner.task === "pet")) {
+            cat.petting = true;
+            cat.watching = true; // 쓰다듬는 중엔 서로 장난 걸지 않는다
+            cat.state = "nuzzle";
+            cat.ticks = 400; // 이윤이 일어날 때까지
           } else if (what === "play" && owner.state === "play") {
             cat.playing = true;
             cat.watching = true; // 놀이 중엔 서로 장난 걸지 않는다
@@ -584,7 +630,8 @@ function step(world: World, width: number) {
   const awake = (c: Cat) =>
     c.goal === undefined && !c.watching && ["walk", "sit", "wag", "groom"].includes(c.state);
 
-  if (owner.task === "churu" || owner.task === "play" || owner.task === "nap") return; // 츄르·놀이·낮잠 중엔 장난 금지
+  // 츄르·놀이·낮잠·쓰다듬 중엔 장난 금지
+  if (owner.task === "churu" || owner.task === "play" || owner.task === "nap" || owner.task === "pet") return;
 
   if (awake(a) && awake(b) && dist > W * 1.2 && dist < W * 2.6 && Math.random() < 0.012) {
     // 사냥놀이: 멀찍이서 납작 엎드려 엉덩이를 씰룩이다가 덮친다
@@ -673,6 +720,8 @@ function frameOf(cat: Cat): FrameName {
       return "jump";
     case "zoom":
       return cat.frame % 2 === 0 ? "walkA" : "walkB";
+    case "nuzzle":
+      return Math.floor(cat.frame / 6) % 2 === 0 ? "nuzzleA" : "nuzzleB";
     default: {
       const speed = cat.state === "run" ? 1 : 2;
       return Math.floor(cat.frame / speed) % 2 === 0 ? "walkA" : "walkB";
@@ -682,6 +731,7 @@ function frameOf(cat: Cat): FrameName {
 
 function ownerFrame(owner: Owner): OwnerFrame {
   if (owner.state === "give" || owner.state === "pour") return "give";
+  if (owner.state === "pet") return Math.floor(owner.frame / 6) % 2 === 0 ? "petA" : "petB";
   if (owner.state === "play") return "wave";
   if (owner.state === "wave") return Math.floor(owner.frame / 3) % 2 === 0 ? "wave" : "stand";
   return Math.floor(owner.frame / 2) % 2 === 0 ? "walkA" : "walkB";

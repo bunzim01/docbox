@@ -161,6 +161,9 @@ const frames = {
     eatA: compose([TAIL_UP, 0, 1], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD_CLOSED, 17, 7]),
     eatB: compose([TAIL_MID, 0, 4], [T_BODY, 2, 6], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [T_HEAD_LICK, 17, 8]),
     jump: compose([TAIL_BACK, 0, 5], [T_BODY, 3, 3], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [T_HEAD, 17, -1]),
+    // 쓰다듬 받는 중 — 눈을 감고 손 쪽으로 머리를 비빈다. 꼬리도 살랑
+    nuzzleA: compose([TAIL_GROUND, 0, 14], [T_SIT, 8, 7], [T_HEAD_CLOSED, 12, 0]),
+    nuzzleB: compose([TAIL_GROUND, 0, 13], [T_SIT, 8, 7], [T_HEAD_CLOSED, 13, 1]),
   },
   jeri: {
     walkA: compose([TAIL_UP, 0, 3], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD, 18, 1]),
@@ -176,6 +179,9 @@ const frames = {
     eatA: compose([TAIL_UP, 0, 3], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD_CLOSED, 19, 6]),
     eatB: compose([TAIL_MID, 0, 6], [J_BODY, 2, 8], [LEG, 4, 13], [LEG, 8, 13], [LEG, 15, 13], [LEG, 19, 13], [J_HEAD_LICK, 19, 7]),
     jump: compose([TAIL_BACK, 0, 6], [J_BODY, 3, 5], [LEG_BACK, 1, 9], [LEG_BACK, 5, 9], [LEG_FRONT, 17, 9], [LEG_FRONT, 21, 9], [J_HEAD, 19, -1]),
+    // 쓰다듬 받는 중 — 눈을 감고 손 쪽으로 머리를 비빈다. 꼬리도 살랑
+    nuzzleA: compose([TAIL_GROUND, 1, 14], [J_SIT, 9, 7], [J_HEAD_CLOSED, 12, -1]),
+    nuzzleB: compose([TAIL_GROUND, 1, 13], [J_SIT, 9, 7], [J_HEAD_CLOSED, 13, 0]),
   },
 };
 
@@ -252,6 +258,37 @@ const O_TORSO_GIVE = [
   ".OBBOOOOOOOBBO......",
   ".OOOOOOOOOOOOO......",
 ];
+// 쓰다듬기 — 쪼그려 앉아 팔을 위로 뻗어 고양이 머리에 손을 얹는다.
+// 고양이 머리가 쪼그린 이윤의 얼굴만큼 높아서, 팔은 어깨보다 위로 올라가야 닿는다.
+// 그래서 이 부품은 윗줄 3칸이 팔뿐이고, composeOwner 에서 y=12 에 놓는다. A/B 로 손이 오르내린다.
+const O_TORSO_PET_A = [
+  "................OOO.",
+  "...............OSSSO",
+  "..............OSSSO.",
+  "..OHHOTTTTOHHOOTTO..",
+  "..OHOTTTTTTOTTTTO...",
+  ".OOTTTTTTTTTTTTO....",
+  ".OTTOTTTTTTOTTO.....",
+  ".OSSOTTTTTTOSSO.....",
+  "..OKKKKKKKKKO.......",
+  ".OKKKKKKKKKKKO......",
+  ".OBBOOOOOOOBBO......",
+  ".OOOOOOOOOOOOO......",
+];
+const O_TORSO_PET_B = [
+  "....................",
+  "................OOO.",
+  "...............OSSSO",
+  "..OHHOTTTTOHHOOSSSO.",
+  "..OHOTTTTTTOTTTTO...",
+  ".OOTTTTTTTTTTTTO....",
+  ".OTTOTTTTTTOTTO.....",
+  ".OSSOTTTTTTOSSO.....",
+  "..OKKKKKKKKKO.......",
+  ".OKKKKKKKKKKKO......",
+  ".OBBOOOOOOOBBO......",
+  ".OOOOOOOOOOOOO......",
+];
 // 손 흔들기 (한쪽 팔을 든다)
 const O_TORSO_WAVE = [
   "..OHHOTTTTOHHO.SSO",
@@ -305,14 +342,29 @@ const owner = {
   walkA: composeOwner([[O_HEAD, 0, 0], [O_TORSO, 0, 11], [O_LEGS_A, 0, 19]]),
   walkB: composeOwner([[O_HEAD, 0, 1], [O_TORSO, 0, 12], [O_LEGS_B, 0, 19]]),
   give: composeOwner([[O_HEAD, 0, 4], [O_TORSO_GIVE, 0, 15]]),
+  petA: composeOwner([[O_HEAD, 0, 4], [O_TORSO_PET_A, 0, 12]]),
+  petB: composeOwner([[O_HEAD, 0, 4], [O_TORSO_PET_B, 0, 12]]),
   wave: composeOwner([[O_HEAD, 0, 0], [O_TORSO_WAVE, 0, 11], [O_LEGS_STAND, 0, 19]]),
 };
 const ownerPalette = {
   O: "#3a2a2a", H: "#4a3028", Z: "#cfe0f2", z: "#eaf3fc", h: "#7a5443", S: "#fbdcc4", s: "#f4a09a", E: "#2a1c1c", W: "#ffffff",
   T: "#f7b8c8", t: "#ec9bb0", K: "#2f3f63", B: "#7a4a3a", C: "#f39a3d", c: "#fff1d6", e: "#3a2a2a",
+  V: "#ef6f8f",
 };
 // 츄르 아이콘 (누르면 이윤이 츄르를 주러 온다)
 const churuIcon = ["......Oc", ".....OCc", "....OCCO", "...OCCO.", "..OCCO..", ".OCCO...", "OCCO....", "OOO....."];
+
+// 쓰다듬기 아이콘 (손 위에 하트)
+const petIcon = [
+  "..V.V...",
+  ".VVVVV..",
+  "..VVV...",
+  "...V....",
+  "........",
+  ".OSSSO..",
+  "OSSSSSO.",
+  ".OOOOO..",
+];
 
 /* ---------- 낚싯대 장난감 (16x12칸) — 오른쪽 아래가 손잡이. A/B 를 번갈아 흔든다 ---------- */
 // 글자: S 막대  r 줄  F 깃털  f 깃털 끝
@@ -408,7 +460,8 @@ export const CAT_H = ${H};
 
 export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
-  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB" | "crouchA" | "crouchB";
+  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB" | "crouchA" | "crouchB"
+  | "nuzzleA" | "nuzzleB";
 
 export type CatKind = "taeri" | "jeri";
 
@@ -429,7 +482,7 @@ export const BOWLS: Record<BowlKind, CatFrame[]> = ${JSON.stringify(bowls, null,
 export const BOWL_PALETTES: Record<BowlKind, Record<string, string>> = ${JSON.stringify(bowlPalettes, null, 2)};
 
 /** 주인 이윤 — 츄르를 주러 온다 */
-export type OwnerFrame = "stand" | "walkA" | "walkB" | "give" | "wave";
+export type OwnerFrame = "stand" | "walkA" | "walkB" | "give" | "petA" | "petB" | "wave";
 export const OWNER_NAME = "이윤";
 export const OWNER_W = ${OW};
 export const OWNER_H = ${OH};
@@ -467,6 +520,9 @@ export const TOY_H = 12;
 export const TOY_FRAMES: Record<"toyA" | "toyB", CatFrame> = ${JSON.stringify(toy, null, 2)};
 export const TOY_PALETTE: Record<string, string> = ${JSON.stringify(toyPalette, null, 2)};
 export const TOY_ICON: CatFrame = ${JSON.stringify(toyIcon, null, 2)};
+
+/** 쓰다듬기 아이콘 (손 + 하트) */
+export const PET_ICON: CatFrame = ${JSON.stringify(petIcon, null, 2)};
 `;
 fs.writeFileSync("lib/cat-sprites.ts", body);
 

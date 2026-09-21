@@ -11,7 +11,8 @@ export const CAT_H = 18;
 
 export type FrameName =
   | "walkA" | "walkB" | "sit" | "sitWag" | "sleep" | "jump"
-  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB" | "crouchA" | "crouchB";
+  | "groomA" | "groomB" | "stretch" | "eatA" | "eatB" | "crouchA" | "crouchB"
+  | "nuzzleA" | "nuzzleB";
 
 export type CatKind = "taeri" | "jeri";
 
@@ -277,6 +278,46 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "..............................",
       "..............................",
       ".............................."
+    ],
+    "nuzzleA": [
+      "..............................",
+      "..............OO.....OO.......",
+      ".............OPIO...OIPO......",
+      ".............OPPOOOOOPPO......",
+      "............OGGGSGMGSGGGO.....",
+      "............OGGGGGMGGGGGO.....",
+      "............OGGCCMNMCCGGO.....",
+      "............OBBBWWWWWBBBO.....",
+      "............OBBBWWWWWBBBO.....",
+      "...........OOOOOOOOOOOOO......",
+      "..........OBBBYBBWWWO.........",
+      ".........OBBBBBBBWWWO.........",
+      "........OBBYBBBBBWWWWO........",
+      "........OBBBBBBBBBWWWO........",
+      "........OBBYBBBBBBBBBO........",
+      ".OOOOOOOOBBBBBBOBBOBBO........",
+      "OPPSPPSPOFFFBBBOFFOFFO........",
+      ".OOOOOOOOOOOOOOOOOOOOO........"
+    ],
+    "nuzzleB": [
+      "..............................",
+      "..............................",
+      "...............OO.....OO......",
+      "..............OPIO...OIPO.....",
+      "..............OPPOOOOOPPO.....",
+      ".............OGGGSGMGSGGGO....",
+      ".............OGGGGGMGGGGGO....",
+      ".............OGGCCMNMCCGGO....",
+      ".............OBBBWWWWWBBBO....",
+      "...........OOOBBBWWWWWBBBO....",
+      "..........OBBBOOOOOOOOOOO.....",
+      ".........OBBBBBBBWWWO.........",
+      "........OBBYBBBBBWWWWO........",
+      "........OBBBBBBBBBWWWO........",
+      ".OOOOOOOOBBYBBBBBBBBBO........",
+      "OPPSPPSPOBBBBBBOBBOBBO........",
+      ".OOOOOOOOFFFBBBOFFOFFO........",
+      "........OOOOOOOOOOOOOO........"
     ]
   },
   "jeri": {
@@ -539,6 +580,46 @@ export const FRAMES: Record<CatKind, Record<FrameName, CatFrame>> = {
       "..............................",
       "..............................",
       ".............................."
+    ],
+    "nuzzleA": [
+      ".............O.......O........",
+      "............OPO.....OPO.......",
+      "............OPIO...OIPO.......",
+      "............OPPOOOOOPPO.......",
+      "............OGGSGMGSGGO.......",
+      "............OGGGGMGGGGO.......",
+      "............OGCCMNMCCGO.......",
+      ".............OBWWWWWBO........",
+      ".............OOOWWWOO.........",
+      "............OBBBOOO...........",
+      "...........OBBYBWWO...........",
+      "...........OBBBBWWWO..........",
+      "..........OBYBBBWWWO..........",
+      "..........OBBBBBBWWO..........",
+      ".........OBBYBBBBBBO..........",
+      "..OOOOOOOOBBBBOBBOBO..........",
+      ".OPPSPPSPOFFFBOFFOFFO.........",
+      "..OOOOOOOOOOOOOOOOOOO........."
+    ],
+    "nuzzleB": [
+      "..............................",
+      "..............O.......O.......",
+      ".............OPO.....OPO......",
+      ".............OPIO...OIPO......",
+      ".............OPPOOOOOPPO......",
+      ".............OGGSGMGSGGO......",
+      ".............OGGGGMGGGGO......",
+      ".............OGCCMNMCCGO......",
+      ".............OOBWWWWWBO.......",
+      "............OBBOOWWWOO........",
+      "...........OBBYBWOOO..........",
+      "...........OBBBBWWWO..........",
+      "..........OBYBBBWWWO..........",
+      "..........OBBBBBBWWO..........",
+      "..OOOOOOOOBBYBBBBBBO..........",
+      ".OPPSPPSPOBBBBOBBOBO..........",
+      "..OOOOOOOOFFFBOFFOFFO.........",
+      ".........OOOOOOOOOOOO........."
     ]
   }
 };
@@ -678,7 +759,7 @@ export const BOWL_PALETTES: Record<BowlKind, Record<string, string>> = {
 };
 
 /** 주인 이윤 — 츄르를 주러 온다 */
-export type OwnerFrame = "stand" | "walkA" | "walkB" | "give" | "wave";
+export type OwnerFrame = "stand" | "walkA" | "walkB" | "give" | "petA" | "petB" | "wave";
 export const OWNER_NAME = "이윤";
 export const OWNER_W = 20;
 export const OWNER_H = 24;
@@ -787,6 +868,58 @@ export const OWNER_FRAMES: Record<OwnerFrame, CatFrame> = {
     ".OBBOOOOOOOBBO......",
     ".OOOOOOOOOOOOO......"
   ],
+  "petA": [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO..OOO.",
+    "..OHHSSSsSSHHO.OSSSO",
+    "..OHHOSSSSOHHOOSSSO.",
+    "..OHHOTTTTOHHOOTTO..",
+    "..OHOTTTTTTOTTTTO...",
+    ".OOTTTTTTTTTTTTO....",
+    ".OTTOTTTTTTOTTO.....",
+    ".OSSOTTTTTTOSSO.....",
+    "..OKKKKKKKKKO.......",
+    ".OKKKKKKKKKKKO......",
+    ".OBBOOOOOOOBBO......",
+    ".OOOOOOOOOOOOO......"
+  ],
+  "petB": [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".....OOOOOO.........",
+    "....OHHhhHHO........",
+    "...OHHhHHHHHO.......",
+    "...OHHHHHHHHO.......",
+    "..OHHHHHHHHHHO......",
+    "..OHHSSHSSSHHO......",
+    "..OHSSSSSSSSHO......",
+    "..OHSEWSSEWSHO......",
+    "..OHSsSSSSsSHO......",
+    "..OHHSSSsSSHHO..OOO.",
+    "..OHHOSSSSOHHO.OSSSO",
+    "..OHHOTTTTOHHOOSSSO.",
+    "..OHOTTTTTTOTTTTO...",
+    ".OOTTTTTTTTTTTTO....",
+    ".OTTOTTTTTTOTTO.....",
+    ".OSSOTTTTTTOSSO.....",
+    "..OKKKKKKKKKO.......",
+    ".OKKKKKKKKKKKO......",
+    ".OBBOOOOOOOBBO......",
+    ".OOOOOOOOOOOOO......"
+  ],
   "wave": [
     ".....OOOOOO.........",
     "....OHHhhHHO........",
@@ -830,7 +963,8 @@ export const OWNER_PALETTE: Record<string, string> = {
   "B": "#7a4a3a",
   "C": "#f39a3d",
   "c": "#fff1d6",
-  "e": "#3a2a2a"
+  "e": "#3a2a2a",
+  "V": "#ef6f8f"
 };
 export const CHURU_ICON: CatFrame = [
   "......Oc",
@@ -1009,4 +1143,16 @@ export const TOY_ICON: CatFrame = [
   "..r...",
   ".r....",
   "S....."
+];
+
+/** 쓰다듬기 아이콘 (손 + 하트) */
+export const PET_ICON: CatFrame = [
+  "..V.V...",
+  ".VVVVV..",
+  "..VVV...",
+  "...V....",
+  "........",
+  ".OSSSO..",
+  "OSSSSSO.",
+  ".OOOOO.."
 ];

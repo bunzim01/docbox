@@ -6,8 +6,8 @@ import {
   BOWLS,
   BOWL_PALETTES,
   CHURU_ICON,
-  NAP_ICON,
   OWNER_PALETTE,
+  PET_ICON,
   TOY_ICON,
   TOY_PALETTE,
 } from "@/lib/cat-sprites";
@@ -39,20 +39,14 @@ const ITEMS: { kind: CareKind; label: string; rows: string[]; palette: Record<st
   { kind: "water", label: "물", rows: BOWLS.water[3], palette: BOWL_PALETTES.water, size: 12 },
   { kind: "churu", label: "츄르", rows: CHURU_ICON, palette: OWNER_PALETTE, size: 10 },
   { kind: "play", label: "놀이", rows: TOY_ICON, palette: TOY_PALETTE, size: 10 },
-  { kind: "nap", label: "낮잠", rows: NAP_ICON, palette: OWNER_PALETTE, size: 12 },
+  { kind: "pet", label: "쓰다듬", rows: PET_ICON, palette: OWNER_PALETTE, size: 11 },
 ];
-
-/**
- * 잠시 숨겨 둔 버튼. 자는 모습이 어색해서 사용자가 숨겨 달라고 했다.
- * 고양이 쪽 코드는 그대로 살아 있으니 여기서 빼기만 하면 다시 나온다.
- */
-const HIDDEN: CareKind[] = ["nap"];
 
 /**
  * 홈 화면의 돌보기 버튼.
  * 밥·물은 평소엔 그릇에 채워져 있고, **비었을 때만** [밥 주기]·[물 주기] 버튼이 나타난다.
- * [츄르]·[놀이] 는 언제든 누를 수 있다. 여러 개가 폰 한 줄에 들어가야 해서 글자는 짧게.
- * ([낮잠] 은 자는 모습을 고칠 때까지 숨겨 뒀다 — HIDDEN)
+ * [츄르]·[놀이]·[쓰다듬] 은 언제든 누를 수 있다. 다섯 개가 폰 한 줄에 들어가야 해서 글자는 짧게.
+ * (같이 낮잠자기는 자는 모습이 어색해서 버튼을 뺐다 — 동작은 app/cats.tsx 에 그대로 있다)
  */
 export default function CatCare() {
   const [bowls, setBowls] = useState<{ food: number; water: number } | null>(null);
@@ -70,12 +64,8 @@ export default function CatCare() {
   }, []);
 
   const empty = { food: bowls?.food === 0, water: bowls?.water === 0 };
-  const shown = ITEMS.filter((item) =>
-    HIDDEN.includes(item.kind)
-      ? false
-      : item.kind !== "food" && item.kind !== "water"
-        ? true
-        : empty[item.kind],
+  const shown = ITEMS.filter(
+    (item) => (item.kind !== "food" && item.kind !== "water" ? true : empty[item.kind]),
   );
 
   return (
