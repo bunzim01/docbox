@@ -10,6 +10,7 @@ import {
   extFromFileName,
   flattenFolders,
   formatSize,
+  MAX_NOTE_LEN,
   parseFeeRate,
   parseTags,
   titleFromFileName,
@@ -26,6 +27,8 @@ type Row = {
   title: string;
   /** 수수료율(%) — 체크리스트 문서에만 쓴다. 파일마다 다르므로 줄마다 따로 받는다 */
   fee: string;
+  /** 수수료 옆에 작게 보이는 짧은 메모 — 이것도 파일마다 다르다 */
+  note: string;
   state: "대기" | "올리는 중" | "완료" | "실패";
   error?: string;
 };
@@ -46,7 +49,6 @@ export default function UploadForm({
   const backHref = fromFolder ? `/?f=${fromFolder}` : "/";
   const [rows, setRows] = useState<Row[]>([]);
   const [tags, setTags] = useState("");
-  const [memo, setMemo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -58,7 +60,7 @@ export default function UploadForm({
     const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES);
     const picked = all
       .filter((f) => f.size <= MAX_FILE_BYTES)
-      .map<Row>((file) => ({ file, title: titleFromFileName(file.name), fee: "", state: "대기" }));
+      .map<Row>((file) => ({ file, title: titleFromFileName(file.name), fee: "", note: "", state: "대기" }));
 
     setRows((prev) => [...prev, ...picked]);
     setError(
@@ -117,7 +119,7 @@ export default function UploadForm({
           fileType: extFromFileName(row.file.name),
           fileSize: row.file.size,
           tags: parsedTags,
-          memo,
+          memo: row.note,
           folderId,
           feeRate: parseFeeRate(row.fee),
         });
@@ -227,15 +229,18 @@ export default function UploadForm({
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div>
                 <input
                   value={row.title}
                   onChange={(e) => patch(i, { title: e.target.value })}
                   placeholder="제목"
                   disabled={busy}
-                  className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
                 />
-                {/* 수수료율 — 체크리스트가 아니면 비워 두면 된다 */}
+              </div>
+
+              {/* 수수료율과 짧은 메모 — 체크리스트가 아니면 둘 다 비워 두면 된다 */}
+              <div className="mt-2 flex gap-2">
                 <div className="flex shrink-0 items-center gap-1">
                   <input
                     value={row.fee}
@@ -247,6 +252,14 @@ export default function UploadForm({
                   />
                   <span className="text-lg text-zinc-400">%</span>
                 </div>
+                <input
+                  value={row.note}
+                  onChange={(e) => patch(i, { note: e.target.value.slice(0, MAX_NOTE_LEN) })}
+                  maxLength={MAX_NOTE_LEN}
+                  placeholder={`메모 (${MAX_NOTE_LEN}자까지)`}
+                  disabled={busy}
+                  className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50 sm:py-2"
+                />
               </div>
 
               {row.error && <p className="mt-2 break-words text-base text-red-600">{row.error}</p>}
@@ -305,16 +318,6 @@ export default function UploadForm({
           ))}
         </div>
       )}
-
-      <label className="mb-1 mt-4 block text-base text-zinc-500">메모</label>
-      <textarea
-        value={memo}
-        onChange={(e) => setMemo(e.target.value)}
-        rows={2}
-        placeholder="나중에 검색할 때 도움이 될 한 줄"
-        disabled={busy}
-        className="w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg bg-paper outline-none focus:border-gold disabled:bg-zinc-50"
-      />
 
       {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-base text-red-600">{error}</p>}
 

@@ -17,6 +17,7 @@ import {
   parseTags,
   viewUrl,
   formatFeeRate,
+  MAX_NOTE_LEN,
   parseFeeRate,
 } from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
@@ -579,9 +580,10 @@ export default function DocList({
                       {doc.is_favorite && <span className="text-gold">★ </span>}
                       {doc.title}
                     </span>
-                    {formatFeeRate(doc.fee_rate) && (
-                      <span className="mt-0.5 inline-block">
+                    {(formatFeeRate(doc.fee_rate) || doc.memo?.trim()) && (
+                      <span className="mt-0.5 flex items-center gap-1">
                         <FeeRate value={doc.fee_rate} />
+                        <NotePill text={doc.memo} />
                       </span>
                     )}
                     <span className="block truncate text-base text-zinc-400">
@@ -1126,8 +1128,20 @@ function DocRows({
                     {doc.title}
                   </a>
                 )}
-                <FeeRate value={doc.fee_rate} />
+                {/* PC 는 자리가 넉넉해서 이름 옆에 */}
+                <span className="hidden items-center gap-1 sm:flex">
+                  <FeeRate value={doc.fee_rate} />
+                  <NotePill text={doc.memo} />
+                </span>
               </p>
+
+              {/* 폰은 이름 옆에 붙이면 제목이 잘린다 — 바로 아랫줄에 */}
+              {(formatFeeRate(doc.fee_rate) || doc.memo?.trim()) && (
+                <p className="mt-1 flex items-center gap-1 sm:hidden">
+                  <FeeRate value={doc.fee_rate} />
+                  <NotePill text={doc.memo} />
+                </p>
+              )}
 
               {doc.tags?.length > 0 && (
                 <p className="mt-0.5 truncate text-base text-zinc-500 sm:hidden">
@@ -1389,6 +1403,20 @@ function MoveSheet({
   );
 }
 
+/** 메모 알약 — 수수료율 옆에 작게. 제목 자리를 뺏지 않게 폭을 제한하고 넘치면 … 로 줄인다 */
+function NotePill({ text }: { text: string | null | undefined }) {
+  const note = (text ?? "").trim();
+  if (!note) return null;
+  return (
+    <span
+      title={note}
+      className="max-w-44 shrink truncate whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-base leading-tight text-zinc-500 sm:max-w-56"
+    >
+      {note}
+    </span>
+  );
+}
+
 /** 수수료율 알약 — 파일명 옆에 작게. 값이 있을 때만 나온다 */
 function FeeRate({ value }: { value: number | null | undefined }) {
   const text = formatFeeRate(value);
@@ -1440,20 +1468,23 @@ function EditSheet({
         <span className="text-lg text-zinc-500">%</span>
       </div>
 
+      <label className="mb-1 block text-base text-zinc-500">
+        메모 — 수수료 옆에 작게 보입니다 ({MAX_NOTE_LEN}자까지)
+      </label>
+      <input
+        value={memo}
+        onChange={(e) => setMemo(e.target.value.slice(0, MAX_NOTE_LEN))}
+        maxLength={MAX_NOTE_LEN}
+        placeholder="예: 부가세 별도"
+        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
+      />
+
       <label className="mb-1 block text-base text-zinc-500">태그 (쉼표로 구분)</label>
       <input
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         placeholder="그라인드, 백화점, 2026"
-        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
-      />
-
-      <label className="mb-1 block text-base text-zinc-500">메모</label>
-      <textarea
-        value={memo}
-        onChange={(e) => setMemo(e.target.value)}
-        rows={2}
-        className="mb-5 w-full resize-none rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold"
+        className="mb-5 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
       />
 
       {error && (
