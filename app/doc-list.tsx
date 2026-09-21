@@ -486,6 +486,7 @@ export default function DocList({
 
       {!searching && !inNoFolder && (
         <FolderSection
+          compact={!atRoot}
           folders={children}
           noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
           canAdd={path.length < MAX_FOLDER_DEPTH}
@@ -853,6 +854,7 @@ function TrashView({
 /* ---------------- 폴더 칸 ---------------- */
 
 function FolderSection({
+  compact,
   folders,
   noFolderCount,
   canAdd,
@@ -864,6 +866,8 @@ function FolderSection({
   onRename,
   onDelete,
 }: {
+  /** 폴더 안(서브 화면)에서는 폴더가 많아 타일을 반만 하게 줄이고 한 줄에 4개를 넣는다 */
+  compact: boolean;
   folders: Folder[];
   noFolderCount: number;
   canAdd: boolean;
@@ -876,6 +880,18 @@ function FolderSection({
   onDelete: (folder: Folder) => void;
 }) {
   if (folders.length === 0 && noFolderCount === 0) return null;
+
+  // 첫 화면은 큼직하게 3개, 폴더 안에서는 작게 4개
+  const grid = compact ? "grid-cols-4 gap-1.5" : "grid-cols-3 gap-2";
+  const tile = compact
+    ? "gap-1 rounded-xl px-0.5 py-2.5"
+    : "gap-1.5 rounded-2xl px-1 py-4 sm:py-3";
+  const icon = compact
+    ? "h-7 w-[34px] drop-shadow-[0_1px_2px_rgba(169,124,47,0.22)]"
+    : "h-11 w-[52px] drop-shadow-[0_2px_3px_rgba(169,124,47,0.25)]";
+  const label = compact
+    ? "line-clamp-2 text-sm font-semibold leading-tight [overflow-wrap:anywhere]"
+    : "text-base font-semibold leading-tight";
 
   return (
     <>
@@ -920,21 +936,24 @@ function FolderSection({
           ))}
         </ul>
       ) : (
-        <div className="mt-2 grid grid-cols-3 gap-2 px-5 sm:hidden">
+        <div className={`mt-2 grid px-5 sm:hidden ${grid}`}>
           {folders.map((folder) => (
             <button
               key={folder.id}
               type="button"
+              title={folder.name}
               onClick={() => onOpen(folder.id)}
-              className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-200 bg-paper px-1 py-4 shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:py-3 sm:hover:bg-zinc-50"
+              className={`flex flex-col items-center border border-zinc-200 bg-paper shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:hover:bg-zinc-50 ${tile}`}
             >
-              <FolderIcon className="h-11 w-[52px] drop-shadow-[0_2px_3px_rgba(169,124,47,0.25)]" />
-              <span className="text-center text-base font-semibold leading-tight">
-                {folderNameLines(folder.name).map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
+              <FolderIcon className={icon} />
+              <span className={`text-center ${label}`}>
+                {compact
+                  ? folder.name
+                  : folderNameLines(folder.name).map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))}
               </span>
             </button>
           ))}
@@ -943,12 +962,10 @@ function FolderSection({
             <button
               type="button"
               onClick={() => onOpen(NO_FOLDER)}
-              className="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-200 bg-paper px-1 py-4 shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:py-3 sm:hover:bg-zinc-50"
+              className={`flex flex-col items-center border border-zinc-200 bg-paper shadow-[0_1px_2px_rgba(34,48,74,0.05)] active:bg-zinc-50 sm:hover:bg-zinc-50 ${tile}`}
             >
-              <FolderIcon className="h-11 w-[52px] drop-shadow-[0_2px_3px_rgba(169,124,47,0.25)]" />
-              <span className="text-center text-base font-semibold leading-tight text-zinc-500">
-                분류 안 함
-              </span>
+              <FolderIcon className={icon} />
+              <span className={`text-center text-zinc-500 ${label}`}>분류 안 함</span>
             </button>
           )}
 
