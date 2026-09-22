@@ -13,9 +13,42 @@
 /** JPEG 품질 — 0.8 이면 품질 100짜리 원본과 눈으로 구분이 잘 안 된다 */
 const QUALITY = 0.8;
 
-/** 쪽을 그릴 가로 크기. 원본이 이미 충분히 크면 원본 그대로 둔다 */
-const TARGET_WIDTH = 1240;
-const MAX_SCALE = 2;
+/**
+ * 그릴 해상도의 상한 (DPI). 300 은 인쇄 품질이라 이보다 위는 의미가 없다.
+ * A4 한 쪽이 약 2480x3508px 이 된다.
+ */
+const DPI_CAP = 300;
+
+/**
+ * PDF 안에 박힌 이미지 중 가장 큰 가로 픽셀 수를 원본 바이트에서 읽는다 (못 찾으면 0).
+ *
+ * 왜 이렇게 하나:
+ *  - 쪽 크기(포인트)만 보고 그리면 안 된다. A4(842pt) 쪽 안에 8001px 이미지가 든 문서가 있어서
+ *    쪽 크기대로 그렸다가 6배 축소돼 확대하면 흐려졌다.
+ *  - pdf.js 로 알아내려 해도 안 된다. getOperatorList 만으론 이미지 객체가 안 풀리고,
+ *    작게 한 번 그려 풀면 pdf.js 가 캔버스에 맞춰 줄여 디코딩해서 원본 크기가 안 잡힌다.
+ *  - 기준점은 반드시 "/Subtype /Image" 로 잡는다. /Width 를 기준으로 훑으면
+ *    압축된 바이너리에서 엉뚱한 숫자를 물어 온다. /Width 는 사전 안에서 앞에 올 수도 있어 양쪽을 본다.
+ */
+function maxImageWidth(bytes: Uint8Array): number {
+  let s: string;
+  try {
+    s = new TextDecoder("latin1").decode(bytes);
+  } catch {
+    return 0;
+  }
+  const found: number[] = [];
+  for (const m of s.matchAll(/\/Subtype\s*\/Image/g)) {
+    const at = m.index ?? 0;
+    const win = s.slice(Math.max(0, at - 500), at + 500);
+    const w = win.match(/\/Width\s+(\d+)/);
+    const h = win.match(/\/Height\s+(\d+)/);
+    if (!w || !h) continue; // 이미지 사전이면 둘 다 있다
+    const n = Number(w[1]);
+    if (n >= 16 && n <= 30000) found.push(n);
+  }
+  return found.length ? Math.max(...found) : 0;
+}
 
 /**
  * 이 크기를 넘는 PDF 만 줄여 본다.
@@ -26,11 +59,40 @@ export const COMPRESS_OVER = 10 * 1024 * 1024;
 /** 이만큼 아래로 줄어야 압축본을 쓴다. 조금밖에 안 줄면 원본이 낫다 */
 const KEEP_IF_UNDER = 0.75;
 
-/** 이 파일을 줄여 볼 만한가 */
+/** 이 파일을 줄여 볼 만한가 (확실한 건 열어 봐야 안다 — compressPdf 가 최종 판단) */
 export function shouldCompress(file: File): boolean {
   const isPdf =
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   return isPdf && file.size > COMPRESS_OVER;
+}
+
+/**
+ * 글자가 이만큼 들어 있으면 '진짜 텍스트 문서' 로 보고 손대지 않는다.
+ * 쪽을 이미지로 다시 굽는 방식이라, 텍스트가 있는 문서를 줄이면
+ * 글자 선택·검색이 사라지고 확대했을 때 흐려진다. 고객에게 보낼 제안서라 그러면 안 된다.
+ * (제품 상세페이지·소개서는 쪽마다 전면 이미지라 글자가 0이다 — 그래서 안전하다)
+ */
+const TEXT_LIMIT = 40;
+
+/** 몇 쪽만 들춰 봐서 진짜 글자가 있는 문서인지 본다 */
+async function hasRealText(doc: {
+  numPages: number;
+  getPage: (n: number) => Promise<{ getTextContent: () => Promise<{ items: unknown[] }> }>;
+}): Promise<boolean> {
+  const total = doc.numPages;
+  const picks = new Set<number>([1, Math.ceil(total / 2), total, 2, total - 1]);
+  let chars = 0;
+  for (const n of picks) {
+    if (n < 1 || n > total) continue;
+    const page = await doc.getPage(n);
+    const text = await page.getTextContent();
+    for (const item of text.items) {
+      const str = (item as { str?: string }).str ?? "";
+      chars += str.trim().length;
+      if (chars > TEXT_LIMIT) return true;
+    }
+  }
+  return false;
 }
 
 export type CompressResult = {
@@ -50,17 +112,30 @@ export async function compressPdf(file: File): Promise<CompressResult | null> {
     ).toString();
 
     const bytes = new Uint8Array(await file.arrayBuffer());
+    // pdf.js 는 넘긴 버퍼의 소유권을 워커로 가져가 버린다(bytes 가 빈 배열이 된다).
+    // 그러니 원본 해상도는 반드시 getDocument 보다 먼저 읽어야 한다.
+    const native = maxImageWidth(bytes);
+
     const task = pdfjs.getDocument({ data: bytes });
     const doc = await task.promise;
+
+    // 진짜 글자가 든 문서는 건드리지 않는다 (이미지로 구우면 글자를 잃는다)
+    if (await hasRealText(doc)) {
+      await task.destroy();
+      return null;
+    }
 
     const pages: { jpeg: Uint8Array; w: number; h: number; boxW: number; boxH: number }[] = [];
 
     for (let n = 1; n <= doc.numPages; n++) {
       const page = await doc.getPage(n);
       const base = page.getViewport({ scale: 1 });
-      // 원본이 이미 1000px 이상이면 확대하지 않는다 (키워 봐야 용량만 는다)
-      const scale =
-        base.width >= 1000 ? 1 : Math.min(TARGET_WIDTH / base.width, MAX_SCALE);
+      // 원본 이미지 해상도에 맞춘다 — 어느 쪽도 원본보다 해상도가 낮아지지 않게.
+      // 쪽 크기보다 작게 줄이지 않고(>=1), 300 DPI 를 넘기지도 않는다.
+      // 해상도를 못 알아냈으면 흐려지는 쪽보다 커지는 쪽이 안전하므로 상한까지 올린다.
+      const cap = DPI_CAP / 72;
+      const wanted = native > 0 ? native / base.width : cap;
+      const scale = Math.min(Math.max(wanted, 1), cap);
       const viewport = page.getViewport({ scale });
 
       const canvas = document.createElement("canvas");
