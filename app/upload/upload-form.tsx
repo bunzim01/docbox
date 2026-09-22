@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions";
+import { compressPdf, shouldCompress } from "@/lib/compress-pdf";
 import { MAX_FILE_BYTES, type Folder } from "@/lib/documents";
 import {
   ACCEPT_EXTS,
@@ -29,8 +30,10 @@ type Row = {
   fee: string;
   /** 수수료 옆에 작게 보이는 짧은 메모 — 이것도 파일마다 다르다 */
   note: string;
-  state: "대기" | "올리는 중" | "완료" | "실패";
+  state: "대기" | "줄이는 중" | "올리는 중" | "완료" | "실패";
   error?: string;
+  /** 줄였을 때 "49.7MB → 9.2MB" 처럼 보여 준다 */
+  shrunk?: string;
 };
 
 export default function UploadForm({
@@ -56,16 +59,17 @@ export default function UploadForm({
   function pickFiles(fileList: FileList | null) {
     if (!fileList) return;
     const all = [...fileList];
-    // 저장소가 50MB 까지만 받는다 — 올리기 전에 걸러 준다 (영상은 여기 걸리기 쉽다)
-    const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES);
+    // 큰 PDF 는 올릴 때 줄여 보므로 여기서 미리 자르지 않는다.
+    // 50MB 가 넘는데 PDF 도 아니면 (영상 등) 줄일 방법이 없으니 바로 알려 준다.
+    const hopeless = all.filter((f) => f.size > MAX_FILE_BYTES && !shouldCompress(f));
     const picked = all
-      .filter((f) => f.size <= MAX_FILE_BYTES)
+      .filter((f) => !hopeless.includes(f))
       .map<Row>((file) => ({ file, title: titleFromFileName(file.name), fee: "", note: "", state: "대기" }));
 
     setRows((prev) => [...prev, ...picked]);
     setError(
-      tooBig.length
-        ? `${tooBig.map((f) => f.name).join(", ")} — ${formatSize(MAX_FILE_BYTES)}보다 커서 올릴 수 없습니다.`
+      hopeless.length
+        ? `${hopeless.map((f) => f.name).join(", ")} — ${formatSize(MAX_FILE_BYTES)}보다 커서 올릴 수 없습니다.`
         : "",
     );
   }
@@ -98,17 +102,38 @@ export default function UploadForm({
       const row = rows[i];
       if (row.state === "완료") continue;
 
+      let file = row.file;
+
+      // 큰 PDF 는 올리기 전에 줄인다 (50MB 제한 + 카톡 전송 속도)
+      if (shouldCompress(file)) {
+        patch(i, { state: "줄이는 중", error: undefined });
+        const smaller = await compressPdf(file);
+        if (smaller) {
+          file = smaller.file;
+          patch(i, { shrunk: `${formatSize(smaller.before)} → ${formatSize(smaller.after)}` });
+        }
+      }
+
+      if (file.size > MAX_FILE_BYTES) {
+        failed += 1;
+        patch(i, {
+          state: "실패",
+          error: `${formatSize(file.size)} — 줄여 봤지만 ${formatSize(MAX_FILE_BYTES)}보다 커서 올릴 수 없습니다.`,
+        });
+        continue;
+      }
+
       patch(i, { state: "올리는 중", error: undefined });
 
       let uploadedPath = "";
       try {
-        const prepared = await prepareUpload(row.file.name);
+        const prepared = await prepareUpload(file.name);
         if (!prepared.ok) throw new Error(prepared.error);
 
         const { error: uploadError } = await supabaseBrowser()
           .storage.from("docs")
-          .uploadToSignedUrl(prepared.path, prepared.token, row.file, {
-            contentType: row.file.type || undefined,
+          .uploadToSignedUrl(prepared.path, prepared.token, file, {
+            contentType: file.type || undefined,
           });
         if (uploadError) throw new Error(uploadError.message);
         uploadedPath = prepared.path;
@@ -116,8 +141,8 @@ export default function UploadForm({
         const saved = await saveDocument({
           title: row.title,
           filePath: prepared.path,
-          fileType: extFromFileName(row.file.name),
-          fileSize: row.file.size,
+          fileType: extFromFileName(file.name),
+          fileSize: file.size,
           tags: parsedTags,
           memo: row.note,
           folderId,
@@ -262,6 +287,9 @@ export default function UploadForm({
                 />
               </div>
 
+              {row.shrunk && (
+                <p className="mt-2 text-base text-emerald-700">용량 줄임 · {row.shrunk}</p>
+              )}
               {row.error && <p className="mt-2 break-words text-base text-red-600">{row.error}</p>}
             </li>
           ))}

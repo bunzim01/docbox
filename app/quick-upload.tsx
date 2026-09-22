@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { compressPdf, shouldCompress } from "@/lib/compress-pdf";
 import { MAX_FILE_BYTES } from "@/lib/documents";
 import { ACCEPT_EXTS, extFromFileName, formatSize, titleFromFileName } from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
@@ -20,12 +21,13 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
+  const [busyNote, setBusyNote] = useState("");
 
   async function upload(files: FileList | File[]) {
     const all = [...files];
-    // 저장소가 50MB 까지만 받는다 — 올리기 전에 걸러 준다
-    const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES);
-    const list = all.filter((f) => f.size <= MAX_FILE_BYTES);
+    // 큰 PDF 는 올리면서 줄이므로 여기서 자르지 않는다. PDF 가 아니면 줄일 방법이 없다
+    const tooBig = all.filter((f) => f.size > MAX_FILE_BYTES && !shouldCompress(f));
+    const list = all.filter((f) => !tooBig.includes(f));
     if (tooBig.length) {
       setError(`${tooBig.length}개가 ${formatSize(MAX_FILE_BYTES)}보다 커서 빠졌습니다.`);
     }
@@ -37,9 +39,25 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
     setDone(0);
 
     let failed = 0;
-    for (const file of list) {
+    let shrank = 0;
+    for (const original of list) {
+      let file = original;
       let uploadedPath = "";
       try {
+        // 큰 PDF 는 올리기 전에 줄인다
+        if (shouldCompress(file)) {
+          setBusyNote("용량 줄이는 중…");
+          const smaller = await compressPdf(file);
+          if (smaller) {
+            file = smaller.file;
+            shrank += 1;
+          }
+          setBusyNote("");
+        }
+        if (file.size > MAX_FILE_BYTES) {
+          throw new Error(`${formatSize(file.size)} — 줄여도 ${formatSize(MAX_FILE_BYTES)}를 넘습니다.`);
+        }
+
         const prepared = await prepareUpload(file.name);
         if (!prepared.ok) throw new Error(prepared.error);
 
@@ -71,7 +89,8 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
 
     setBusy(false);
     setTotal(0);
-    if (failed === 0 && !tooBig.length) setError("");
+    setBusyNote("");
+    if (failed === 0 && !tooBig.length) setError(shrank ? `${shrank}개는 용량을 줄여서 올렸습니다.` : "");
     if (failed < list.length) tellCats("upload");
     router.refresh();
   }
@@ -98,7 +117,7 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
         <span className="text-4xl leading-none text-gold">+</span>
         <span className="mt-3 text-lg font-semibold text-zinc-700">
           {busy
-            ? `올리는 중… (${done}/${total})`
+            ? busyNote || `올리는 중… (${done}/${total})`
             : dragging
               ? "여기에 놓으세요"
               : "파일 올리기"}

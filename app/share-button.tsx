@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DocView } from "@/lib/documents";
-import { canShareFiles, copyShareLinks, shareFiles } from "@/lib/share";
+import { canShareFiles, copyShareLinks, isPrepared, prepareFiles, shareFiles } from "@/lib/share";
 import { tellCats } from "@/lib/cat-events";
 import { markSent } from "./actions";
 import KakaoIcon from "./kakao-icon";
@@ -34,6 +34,16 @@ export default function ShareButton({
     setMode(canShareFiles() ? "file" : "link");
   }, []);
 
+  /**
+   * 손가락이 닿는 순간 파일을 미리 받기 시작한다.
+   * 아이폰은 "누른 직후" 가 아니면 공유창을 막기 때문에, 누른 뒤에 받기 시작하면
+   * 첫 번째 탭은 거의 항상 실패하고 두 번 눌러야 했다. 미리 시작해 두면 한 번에 뜬다.
+   */
+  function warmUp() {
+    if (mode !== "file" || isPrepared([doc])) return;
+    prepareFiles([doc]).catch(() => {}); // 실패해도 누를 때 다시 받는다
+  }
+
   async function go() {
     setBusy(true);
     try {
@@ -57,7 +67,21 @@ export default function ShareButton({
           onNotify(result.message);
           return;
         }
-        // 기기가 거절하면 링크 방식으로 넘어간다
+        if (result.status === "too-big") {
+          // 파일이 커서 기기가 공유를 거절했다 — 왜 링크가 복사됐는지 알려 줘야 한다
+          const ok = await copyShareLinks([doc.id]);
+          onNotify(
+            ok
+              ? "파일이 커서 링크를 복사했습니다. 카톡에 붙여넣기 하세요"
+              : "파일이 너무 커서 보낼 수 없습니다",
+          );
+          if (ok) {
+            await markSent(doc.id);
+            onDone();
+          }
+          return;
+        }
+        // 그 밖의 경우(이 기기가 파일 공유를 못 함)는 링크 방식으로 넘어간다
       }
 
       const copied = await copyShareLinks([doc.id]);
@@ -75,6 +99,8 @@ export default function ShareButton({
     <button
       type="button"
       disabled={busy || mode === "unknown"}
+      onPointerDown={warmUp}
+      onPointerEnter={warmUp}
       onClick={go}
       aria-label="카카오톡으로 보내기"
       className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#FEE500] font-bold text-[#191600] active:brightness-95 disabled:opacity-40 sm:h-9 sm:hover:brightness-95 ${
