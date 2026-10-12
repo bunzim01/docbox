@@ -63,10 +63,27 @@ export function isArchive(fileType: string | null): boolean {
   return ARCHIVE_EXTS.includes((fileType ?? "").toLowerCase());
 }
 
+/**
+ * 압축 파일의 '종류 이름'들. 폰 파일 고르기 창은 확장자(.zip)가 아니라 이 종류 이름으로 거른다.
+ * 같은 zip 이라도 받은 곳(카톡·윈도우 등)에 따라 붙는 이름이 달라서, 하나만 적으면 목록에서 아예 안 보였다.
+ */
+const ARCHIVE_MIMES = [
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/x-zip",
+  "multipart/x-zip",
+  "application/x-7z-compressed",
+  "application/vnd.rar",
+  "application/x-rar-compressed",
+  "application/x-rar",
+];
+
 /** 파일 고르기 창에서 받아 주는 확장자 (업로드 화면·PC 올리기 영역이 함께 쓴다) */
 export const ACCEPT_EXTS =
   ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx," +
-  [...VIDEO_EXTS, ...ARCHIVE_EXTS].map((e) => "." + e).join(",");
+  [...VIDEO_EXTS, ...ARCHIVE_EXTS].map((e) => "." + e).join(",") +
+  "," +
+  ARCHIVE_MIMES.join(",");
 
 /** 파일 종류별 배지 (색 + 짧은 라벨) */
 export function fileBadge(fileType: string | null): { label: string; className: string } {
