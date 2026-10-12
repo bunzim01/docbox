@@ -1,5 +1,5 @@
 /** 파일 종류별 아이콘 — 탐색기처럼 문서 모양 + 종류 띠 */
-import { isVideo } from "@/lib/format";
+import { isArchive, isVideo } from "@/lib/format";
 
 type Spec = { label: string; color: string };
 
@@ -11,6 +11,7 @@ function spec(fileType: string | null): Spec {
   if (t === "xls" || t === "xlsx") return { label: "XLS", color: "#2F9E44" };
   if (t === "hwp" || t === "hwpx") return { label: "HWP", color: "#0B7285" };
   if (isVideo(t)) return { label: "영상", color: "#7048E8" };
+  if (isArchive(t)) return { label: t === "zip" ? "ZIP" : t.toUpperCase(), color: "#B7791F" };
   return { label: (t || "FILE").toUpperCase().slice(0, 4), color: "#71717A" };
 }
 

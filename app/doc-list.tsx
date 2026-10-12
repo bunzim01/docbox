@@ -270,7 +270,11 @@ export default function DocList({
           setError(result.message);
           return;
         }
-        setToast("한 번에 보내기엔 용량이 큽니다. 링크로 보냅니다.");
+        setToast(
+          result.status === "wrong-type"
+            ? "파일로 못 보내는 종류(압축 등)가 있어 링크로 보냅니다."
+            : "한 번에 보내기엔 용량이 큽니다. 링크로 보냅니다.",
+        );
       }
 
       const copied = await copyShareLinks(picked);

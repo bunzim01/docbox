@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DocView } from "@/lib/documents";
-import { canShareFiles, copyShareLinks, isPrepared, prepareFiles, shareFiles } from "@/lib/share";
+import { canShareFiles, canShareType, copyShareLinks, isPrepared, prepareFiles, shareFiles } from "@/lib/share";
 import { tellCats } from "@/lib/cat-events";
 import { markSent } from "./actions";
 import KakaoIcon from "./kakao-icon";
@@ -40,7 +40,7 @@ export default function ShareButton({
    * 첫 번째 탭은 거의 항상 실패하고 두 번 눌러야 했다. 미리 시작해 두면 한 번에 뜬다.
    */
   function warmUp() {
-    if (mode !== "file" || isPrepared([doc])) return;
+    if (mode !== "file" || isPrepared([doc]) || !canShareType([doc])) return;
     prepareFiles([doc]).catch(() => {}); // 실패해도 누를 때 다시 받는다
   }
 
@@ -65,6 +65,20 @@ export default function ShareButton({
         }
         if (result.status === "error") {
           onNotify(result.message);
+          return;
+        }
+        if (result.status === "wrong-type") {
+          // 압축 파일 등 — 이 폰은 파일로 못 보내는 종류라 링크로 보낸다
+          const ok = await copyShareLinks([doc.id]);
+          onNotify(
+            ok
+              ? "이 종류는 폰에서 파일로 못 보내 링크를 복사했습니다. 카톡에 붙여넣기 하세요"
+              : "링크를 복사하지 못했습니다",
+          );
+          if (ok) {
+            await markSent(doc.id);
+            onDone();
+          }
           return;
         }
         if (result.status === "too-big") {

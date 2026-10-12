@@ -7,6 +7,45 @@ export type ShareItem = {
   fileUrl: string;
 };
 
+/** 확장자로 짐작한 파일 종류 — 받기 전에 "이 종류를 보낼 수 있나" 물어볼 때 쓴다 */
+const MIME: Record<string, string> = {
+  pdf: "application/pdf",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  hwp: "application/x-hwp",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  m4v: "video/x-m4v",
+  webm: "video/webm",
+  zip: "application/zip",
+  "7z": "application/x-7z-compressed",
+  rar: "application/vnd.rar",
+};
+
+/**
+ * 이 기기가 이 종류의 파일을 공유시트로 보낼 수 있는지 — 파일을 받기 전에 확인한다.
+ * 안드로이드 크롬은 PDF·사진·영상·소리·글 파일만 보내게 허락한다(압축·오피스 파일은 거절).
+ * 아이폰은 대개 다 된다. 50MB 압축 파일을 다 받고 나서야 거절당하지 않게 미리 묻는다.
+ */
+export function canShareType(items: ShareItem[]): boolean {
+  if (typeof navigator === "undefined" || !navigator.canShare) return false;
+  try {
+    const probe = items.map((item) => {
+      const t = (item.file_type ?? "").toLowerCase();
+      return new File(["x"], downloadFileName(item.title, item.file_type), {
+        type: MIME[t] ?? "application/octet-stream",
+      });
+    });
+    return navigator.canShare({ files: probe });
+  } catch {
+    return false;
+  }
+}
+
 /** 이 기기가 파일을 공유시트로 보낼 수 있는지 (폰이면 대개 가능) */
 export function canShareFiles(): boolean {
   if (typeof navigator === "undefined" || !navigator.canShare) return false;
@@ -102,6 +141,8 @@ export type ShareResult =
   | { status: "unsupported" }
   /** 파일이 너무 커서 기기가 공유를 거절했다 → 링크로 보내야 한다 */
   | { status: "too-big" }
+  /** 이 기기가 이 종류(압축 등)는 파일로 못 보낸다 → 링크로 보내야 한다 */
+  | { status: "wrong-type" }
   | { status: "error"; message: string };
 
 /**
@@ -110,6 +151,7 @@ export type ShareResult =
  */
 export async function shareFiles(items: ShareItem[]): Promise<ShareResult> {
   if (items.length === 0) return { status: "error", message: "보낼 문서가 없습니다." };
+  if (!canShareType(items)) return { status: "wrong-type" };
 
   const wasReady = isPrepared(items);
 
@@ -176,6 +218,7 @@ export function prefetchForShare(items: (ShareItem & { file_size: number | null 
   const maxBytes = onWifi ? 30 * 1024 * 1024 : 5 * 1024 * 1024;
   const targets = items
     .filter((item) => !cache.has(item.id) && (item.file_size ?? Infinity) <= maxBytes)
+    .filter((item) => canShareType([item])) // 어차피 링크로 갈 종류는 미리 받지 않는다
     .slice(0, onWifi ? 4 : 2);
   if (targets.length === 0) return;
 

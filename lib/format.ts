@@ -56,9 +56,17 @@ export function isVideo(fileType: string | null): boolean {
   return VIDEO_EXTS.includes((fileType ?? "").toLowerCase());
 }
 
+/** 압축 파일 확장자 — 상세페이지 묶음처럼 여러 파일을 한 번에 주고받을 때 */
+const ARCHIVE_EXTS = ["zip", "7z", "rar"];
+
+export function isArchive(fileType: string | null): boolean {
+  return ARCHIVE_EXTS.includes((fileType ?? "").toLowerCase());
+}
+
 /** 파일 고르기 창에서 받아 주는 확장자 (업로드 화면·PC 올리기 영역이 함께 쓴다) */
 export const ACCEPT_EXTS =
-  ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx," + VIDEO_EXTS.map((e) => "." + e).join(",");
+  ".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx," +
+  [...VIDEO_EXTS, ...ARCHIVE_EXTS].map((e) => "." + e).join(",");
 
 /** 파일 종류별 배지 (색 + 짧은 라벨) */
 export function fileBadge(fileType: string | null): { label: string; className: string } {
@@ -68,6 +76,7 @@ export function fileBadge(fileType: string | null): { label: string; className: 
   if (t === "doc" || t === "docx") return { label: "DOC", className: "bg-blue-100 text-blue-700" };
   if (t === "xls" || t === "xlsx") return { label: "XLS", className: "bg-emerald-100 text-emerald-700" };
   if (isVideo(t)) return { label: "영상", className: "bg-violet-100 text-violet-700" };
+  if (isArchive(t)) return { label: "압축", className: "bg-amber-100 text-amber-800" };
   return { label: (t || "파일").toUpperCase().slice(0, 4), className: "bg-zinc-100 text-zinc-600" };
 }
 
