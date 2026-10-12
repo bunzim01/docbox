@@ -17,6 +17,7 @@ import {
   parseTags,
   viewUrl,
   isTouchDevice,
+  opensInApp,
   formatFeeRate,
   MAX_NOTE_LEN,
   parseFeeRate,
@@ -586,10 +587,10 @@ export default function DocList({
                   className="flex items-center gap-3 px-5 py-3 sm:py-1.5 sm:hover:bg-zinc-100"
                 >
                   <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
-                  <a
+                  <Link
                     href={viewUrl(doc, onPhone)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    prefetch={false}
+                    {...(opensInApp(doc, onPhone) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                     className="min-w-0 flex-1 hover:underline"
                   >
                     <span className="line-clamp-2 text-lg leading-snug [overflow-wrap:anywhere] sm:line-clamp-1">
@@ -608,7 +609,7 @@ export default function DocList({
                         .join(" › ") || "분류 안 함"}
                       {doc.sent_count > 0 ? ` · ${doc.sent_count}번 보냄` : ""}
                     </span>
-                  </a>
+                  </Link>
                   <ShareButton doc={doc} onDone={() => router.refresh()} onNotify={setToast} />
                 </li>
               ))}
@@ -1157,14 +1158,14 @@ function DocRows({
                 {selecting ? (
                   <span className="line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-1">{doc.title}</span>
                 ) : (
-                  <a
+                  <Link
                     href={viewUrl(doc, onPhone)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    prefetch={false}
+                    {...(opensInApp(doc, onPhone) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                     className="line-clamp-2 [overflow-wrap:anywhere] hover:underline sm:line-clamp-1"
                   >
                     {doc.title}
-                  </a>
+                  </Link>
                 )}
                 <FeeRate value={doc.fee_rate} />
                 <NotePill text={doc.memo} />

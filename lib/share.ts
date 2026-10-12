@@ -36,6 +36,11 @@ function remember(id: string, file: File) {
   }
 }
 
+/** 이미 받아 둔 파일 (앱 안 PDF 보기 화면이 같은 파일로 화면도 그리고 카톡도 보낸다 — 두 번 받지 않게) */
+export function preparedFile(id: string): File | undefined {
+  return cache.get(id);
+}
+
 export function isPrepared(items: ShareItem[]): boolean {
   return items.every((item) => cache.has(item.id));
 }

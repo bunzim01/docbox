@@ -105,9 +105,9 @@ export type CompressResult = {
 export async function compressPdf(file: File): Promise<CompressResult | null> {
   try {
     // 무거운 라이브러리라 큰 PDF 를 만났을 때만 불러온다
-    const pdfjs = await import("pdfjs-dist");
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      "pdfjs-dist/build/pdf.worker.min.mjs",
+      "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
       import.meta.url,
     ).toString();
 

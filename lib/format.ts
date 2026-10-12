@@ -217,19 +217,23 @@ export function matchesQuery(text: string, query: string): boolean {
  * 그 밖의 문서(엑셀·워드·PPT·한글)는 기기가 직접 열도록 제목이 붙은 파일 주소를 준다.
  * (오피스 온라인 뷰어는 열리기까지 10초가 넘게 걸려 안 열리는 것처럼 보였다)
  *
- * 폰(onPhone)에서는 PDF 도 제목이 붙은 주소로 연다.
- * 파일 주소 그대로 열면 폰 브라우저가 PDF 를 띄운 채로 남는데, 거기서 폰의 [공유]를 누르면
- * 파일 이름이 저장소 이름(uuid)으로 바뀌고 주소 링크까지 같이 카톡으로 갔다.
- * 제목 주소로 열면 폰이 '제목.pdf' 로 받아 PDF 앱으로 열고, 거기서 공유하면 파일만 깨끗하게 간다.
+ * 폰(onPhone)에서는 PDF 를 앱 안 보기 화면(`/v/[id]`)으로 연다. 맨 위 카톡 버튼으로 파일만 보낸다.
+ * 폰 브라우저로 PDF 를 열면 거기서 [공유]를 눌렀을 때 크롬이 파일 주소 링크를 꼭 같이 붙여 보냈다
+ * (사이트에서 끌 수 없다). 처음엔 uuid 이름까지 갔고, 제목 주소로 바꾼 뒤에도 링크는 남았다.
  */
 export function viewUrl(
-  doc: { fileUrl: string; downloadUrl: string; file_type: string | null },
+  doc: { id: string; fileUrl: string; downloadUrl: string; file_type: string | null },
   onPhone = false,
 ): string {
   const t = (doc.file_type ?? "").toLowerCase();
   if (isVideo(t)) return doc.fileUrl;
-  if (t === "pdf") return onPhone ? doc.downloadUrl : doc.fileUrl;
+  if (t === "pdf") return onPhone ? `/v/${doc.id}` : doc.fileUrl;
   return doc.downloadUrl;
+}
+
+/** 앱 안 화면으로 여는지 (새 탭이 아니라 같은 화면에서 넘어간다) */
+export function opensInApp(doc: { file_type: string | null }, onPhone: boolean): boolean {
+  return onPhone && (doc.file_type ?? "").toLowerCase() === "pdf";
 }
 
 /** 손가락으로 쓰는 기기(폰·태블릿)인지 — 마우스가 없는 화면 */
