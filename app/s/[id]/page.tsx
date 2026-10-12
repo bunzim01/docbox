@@ -82,17 +82,29 @@ export default async function SharePage({ params }: Params) {
             className="mx-5 hidden h-[70vh] rounded-xl border border-zinc-200 bg-paper shadow-sm sm:block"
           />
           <div className="px-5 sm:mt-4">
+            {/*
+              폰: 버튼 하나. 제목이 붙은 주소로 열어 '제목.pdf' 로 받는다.
+              파일 주소 그대로 열면 받는 사람이 거기서 다시 공유할 때 파일 이름이 uuid 로 바뀌고
+              주소 링크까지 같이 갔다 (카톡 인앱 브라우저에서는 아예 uuid 이름으로 저장되기도 한다).
+            */}
+            <a
+              href={downloadUrl}
+              className="block rounded-xl bg-zinc-900 py-4 text-center text-xl font-semibold text-white active:bg-zinc-700 sm:hidden"
+            >
+              문서 열기
+            </a>
+            {/* PC: 위 창에서 바로 보이고, 새 탭으로 크게 보기 + 다운로드 */}
             <a
               href={viewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-xl bg-zinc-900 py-4 text-center text-xl font-semibold text-white active:bg-zinc-700 sm:py-3 sm:hover:bg-zinc-700"
+              className="hidden rounded-xl bg-zinc-900 py-3 text-center text-xl font-semibold text-white hover:bg-zinc-700 sm:block"
             >
               문서 보기
             </a>
             <a
               href={downloadUrl}
-              className="mt-3 block rounded-xl border border-zinc-300 bg-paper py-4 text-center text-xl font-semibold text-zinc-700 active:bg-zinc-100 sm:py-3 sm:hover:bg-zinc-50"
+              className="mt-3 hidden rounded-xl border border-zinc-300 bg-paper py-3 text-center text-xl font-semibold text-zinc-700 hover:bg-zinc-50 sm:block"
             >
               다운로드
             </a>
