@@ -216,8 +216,24 @@ export function matchesQuery(text: string, query: string): boolean {
  * PDF 와 영상은 브라우저가 그 자리에서 보여 주고(영상은 탭에서 바로 재생된다),
  * 그 밖의 문서(엑셀·워드·PPT·한글)는 기기가 직접 열도록 제목이 붙은 파일 주소를 준다.
  * (오피스 온라인 뷰어는 열리기까지 10초가 넘게 걸려 안 열리는 것처럼 보였다)
+ *
+ * 폰(onPhone)에서는 PDF 도 제목이 붙은 주소로 연다.
+ * 파일 주소 그대로 열면 폰 브라우저가 PDF 를 띄운 채로 남는데, 거기서 폰의 [공유]를 누르면
+ * 파일 이름이 저장소 이름(uuid)으로 바뀌고 주소 링크까지 같이 카톡으로 갔다.
+ * 제목 주소로 열면 폰이 '제목.pdf' 로 받아 PDF 앱으로 열고, 거기서 공유하면 파일만 깨끗하게 간다.
  */
-export function viewUrl(doc: { fileUrl: string; downloadUrl: string; file_type: string | null }): string {
+export function viewUrl(
+  doc: { fileUrl: string; downloadUrl: string; file_type: string | null },
+  onPhone = false,
+): string {
   const t = (doc.file_type ?? "").toLowerCase();
-  return t === "pdf" || isVideo(t) ? doc.fileUrl : doc.downloadUrl;
+  if (isVideo(t)) return doc.fileUrl;
+  if (t === "pdf") return onPhone ? doc.downloadUrl : doc.fileUrl;
+  return doc.downloadUrl;
+}
+
+/** 손가락으로 쓰는 기기(폰·태블릿)인지 — 마우스가 없는 화면 */
+export function isTouchDevice(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 }

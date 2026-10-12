@@ -116,10 +116,9 @@ export async function shareFiles(items: ShareItem[]): Promise<ShareResult> {
     // 용량이 크거나 개수가 많으면 기기가 거절한다 → 링크로 보내야 한다
     if (!navigator.canShare?.({ files })) return { status: "too-big" };
 
-    await navigator.share({
-      files,
-      title: items.length === 1 ? items[0].title : `문서 ${items.length}개`,
-    });
+    // 파일만 싣는다. title·text 를 같이 넣으면 카톡이 그 글자를 메시지로 한 번 더 보낸다
+    // (파일 아래에 파일 이름이 또 한 줄 찍혔다)
+    await navigator.share({ files });
     return { status: "shared" };
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") return { status: "cancelled" };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { MAX_FOLDER_DEPTH, type DocView, type Folder } from "@/lib/documents";
 import {
   childFolders,
@@ -16,6 +16,7 @@ import {
   matchesQuery,
   parseTags,
   viewUrl,
+  isTouchDevice,
   formatFeeRate,
   MAX_NOTE_LEN,
   parseFeeRate,
@@ -54,6 +55,19 @@ type TrashedDoc = DocView & { daysLeft: number };
 
 type Result = { ok: true } | { ok: false; error: string };
 
+/** 폰에서 쓰는 중인지 (PDF 를 여는 방식이 달라진다 — lib/format.ts viewUrl 참고) */
+function useOnPhone(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia("(hover: none) and (pointer: coarse)");
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    isTouchDevice,
+    () => false, // 서버에서 그릴 때는 PC 로 본다
+  );
+}
+
 export default function DocList({
   documents,
   folders,
@@ -63,6 +77,7 @@ export default function DocList({
   folders: Folder[];
   trashed: TrashedDoc[];
 }) {
+  const onPhone = useOnPhone();
   const router = useRouter();
   const params = useSearchParams();
   const openFolder = params.get("f");
@@ -572,7 +587,7 @@ export default function DocList({
                 >
                   <FileIcon fileType={doc.file_type} className="h-8 w-[26px] shrink-0" />
                   <a
-                    href={viewUrl(doc)}
+                    href={viewUrl(doc, onPhone)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="min-w-0 flex-1 hover:underline"
@@ -1022,6 +1037,7 @@ function DocRows({
   onShared: () => void;
   onNotify: (message: string) => void;
 }) {
+  const onPhone = useOnPhone();
   const [folderMenu, setFolderMenu] = useState<string | null>(null);
 
   if (docs.length === 0 && folderRows.length === 0 && noFolderCount === 0) {
@@ -1142,7 +1158,7 @@ function DocRows({
                   <span className="line-clamp-2 [overflow-wrap:anywhere] sm:line-clamp-1">{doc.title}</span>
                 ) : (
                   <a
-                    href={viewUrl(doc)}
+                    href={viewUrl(doc, onPhone)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="line-clamp-2 [overflow-wrap:anywhere] hover:underline sm:line-clamp-1"
