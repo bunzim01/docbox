@@ -85,30 +85,50 @@ export function isPrepared(items: ShareItem[]): boolean {
 }
 
 /**
- * 파일 하나를 받는 데 기다려 주는 시간.
+ * 파일이 멈춘 채로 기다려 주는 시간 — 이만큼 한 바이트도 안 오면 포기한다.
  * 없으면 신호가 나쁜 곳에서 버튼이 '준비 중…' 으로 영원히 멈춰 있어 고장난 것처럼 보인다.
+ * (전체 시간이 아니라 '멈춘 시간'으로 잰다 — 큰 파일이 느리게라도 오고 있으면 끊지 않는다)
  */
-const FETCH_TIMEOUT = 60_000;
+const STALL_TIMEOUT = 30_000;
 
-/** 파일을 받아서 기억해 둔다 (이미 받았으면 건너뜀) */
-export async function prepareFiles(items: ShareItem[]): Promise<void> {
-  for (const item of items) {
-    if (cache.has(item.id)) continue;
+/** 받는 중 진행 알림 (받은 바이트, 전체 바이트 — 전체를 모르면 0) */
+export type Progress = (received: number, total: number) => void;
 
-    const stop = new AbortController();
-    const timer = setTimeout(() => stop.abort(), FETCH_TIMEOUT);
-    let res: Response;
-    try {
-      res = await fetch(item.fileUrl, { signal: stop.signal });
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") {
-        throw new Error(`"${item.title}" 을 받는 데 너무 오래 걸립니다. 신호가 좋은 곳에서 다시 눌러 주세요.`);
-      }
-      throw new Error(`"${item.title}" 을 받지 못했습니다. 인터넷 연결을 확인해 주세요.`);
-    } finally {
-      clearTimeout(timer);
-    }
+/**
+ * 지금 받고 있는 파일들.
+ * 손가락이 닿는 순간(warmUp) 받기 시작하고, 손을 떼면(go) 또 받으려 했다 — 같은 파일을 두 번 동시에 받아
+ * 둘 다 느려지고, 그 사이 폰의 '누른 직후' 시간이 지나 공유창이 막혔다("한 번 더 눌러 보내세요").
+ * 이미 받고 있으면 그 받기를 같이 기다린다.
+ */
+const inflight = new Map<string, { done: Promise<void>; listeners: Set<Progress> }>();
 
+function prepareOne(item: ShareItem, onProgress?: Progress): Promise<void> {
+  if (cache.has(item.id)) return Promise.resolve();
+
+  const running = inflight.get(item.id);
+  if (running) {
+    if (onProgress) running.listeners.add(onProgress);
+    return running.done;
+  }
+
+  const listeners = new Set<Progress>(onProgress ? [onProgress] : []);
+  const done = download(item, (r, t) => listeners.forEach((fn) => fn(r, t))).finally(() =>
+    inflight.delete(item.id),
+  );
+  inflight.set(item.id, { done, listeners });
+  return done;
+}
+
+async function download(item: ShareItem, report: Progress): Promise<void> {
+  const stop = new AbortController();
+  let timer = setTimeout(() => stop.abort(), STALL_TIMEOUT);
+  const poke = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => stop.abort(), STALL_TIMEOUT);
+  };
+
+  try {
+    const res = await fetch(item.fileUrl, { signal: stop.signal });
     if (!res.ok) {
       // 404 면 저장소에 파일이 없다 = 업로드가 중간에 끊긴 문서
       throw new Error(
@@ -118,7 +138,29 @@ export async function prepareFiles(items: ShareItem[]): Promise<void> {
       );
     }
 
-    const blob = await res.blob();
+    const total = Number(res.headers.get("content-length")) || 0;
+    const type = res.headers.get("content-type") || "application/octet-stream";
+    let blob: Blob;
+
+    if (res.body) {
+      // 조금씩 읽으며 진행률을 알린다 (버튼에 %로 보여 준다)
+      const reader = res.body.getReader();
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      let received = 0;
+      report(0, total);
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value as Uint8Array<ArrayBuffer>);
+        received += value.byteLength;
+        poke();
+        report(received, total);
+      }
+      blob = new Blob(chunks, { type });
+    } else {
+      blob = await res.blob();
+    }
+
     if (blob.size === 0) {
       throw new Error(`"${item.title}" 파일이 비어 있습니다. 다시 올려 주세요.`);
     }
@@ -129,7 +171,22 @@ export async function prepareFiles(items: ShareItem[]): Promise<void> {
         type: blob.type || "application/octet-stream",
       }),
     );
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error(`"${item.title}" 을 받는 데 너무 오래 걸립니다. 신호가 좋은 곳에서 다시 눌러 주세요.`);
+    }
+    if (e instanceof TypeError) {
+      throw new Error(`"${item.title}" 을 받지 못했습니다. 인터넷 연결을 확인해 주세요.`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+/** 파일을 받아서 기억해 둔다 (이미 받았으면 건너뛰고, 받고 있는 중이면 그걸 같이 기다린다) */
+export async function prepareFiles(items: ShareItem[], onProgress?: Progress): Promise<void> {
+  for (const item of items) await prepareOne(item, onProgress);
 }
 
 export type ShareResult =
@@ -149,14 +206,14 @@ export type ShareResult =
  * 파일들을 기기 공유시트로 보낸다. 카톡을 고르면 파일이 그대로 전송된다.
  * 이미 받아 둔 파일이면 기다림 없이 곧바로 공유창을 띄운다.
  */
-export async function shareFiles(items: ShareItem[]): Promise<ShareResult> {
+export async function shareFiles(items: ShareItem[], onProgress?: Progress): Promise<ShareResult> {
   if (items.length === 0) return { status: "error", message: "보낼 문서가 없습니다." };
   if (!canShareType(items)) return { status: "wrong-type" };
 
   const wasReady = isPrepared(items);
 
   try {
-    if (!wasReady) await prepareFiles(items);
+    if (!wasReady) await prepareFiles(items, onProgress);
 
     const files = items.map((item) => cache.get(item.id)!);
 
