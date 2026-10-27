@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { discardUploadedFile, prepareUpload, saveDocument } from "@/app/actions";
 import { compressPdf, shouldCompress } from "@/lib/compress-pdf";
 import { MAX_FILE_BYTES, type Folder } from "@/lib/documents";
 import {
@@ -17,7 +16,7 @@ import {
   titleFromFileName,
 } from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+import { uploadFile } from "@/lib/upload-file";
 import BackIcon from "@/app/back-icon";
 import FileIcon from "@/app/file-icon";
 
@@ -125,36 +124,18 @@ export default function UploadForm({
 
       patch(i, { state: "올리는 중", error: undefined });
 
-      let uploadedPath = "";
       try {
-        const prepared = await prepareUpload(file.name);
-        if (!prepared.ok) throw new Error(prepared.error);
-
-        const { error: uploadError } = await supabaseBrowser()
-          .storage.from("docs")
-          .uploadToSignedUrl(prepared.path, prepared.token, file, {
-            contentType: file.type || undefined,
-          });
-        if (uploadError) throw new Error(uploadError.message);
-        uploadedPath = prepared.path;
-
-        const saved = await saveDocument({
+        await uploadFile(file, {
           title: row.title,
-          filePath: prepared.path,
           fileType: extFromFileName(file.name),
-          fileSize: file.size,
           tags: parsedTags,
           memo: row.note,
           folderId,
           feeRate: parseFeeRate(row.fee),
         });
-        if (!saved.ok) throw new Error(saved.error);
-
         patch(i, { state: "완료" });
       } catch (e) {
         failed += 1;
-        // 파일만 올라가고 정보 저장에 실패하면 찌꺼기가 남으므로 치운다
-        if (uploadedPath) await discardUploadedFile(uploadedPath).catch(() => {});
         patch(i, { state: "실패", error: e instanceof Error ? e.message : String(e) });
       }
     }

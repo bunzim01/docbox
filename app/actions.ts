@@ -53,6 +53,14 @@ export async function saveDocument(input: {
   if (!title) return { ok: false, error: "제목을 입력해 주세요." };
   if (!input.filePath) return { ok: false, error: "파일 경로가 없습니다." };
 
+  // 같은 파일을 두 번 저장하지 않는다 — 저장은 됐는데 응답이 끊겨 브라우저가 다시 시도한 경우
+  const { data: existing } = await supabase()
+    .from("documents")
+    .select("id")
+    .eq("file_path", input.filePath)
+    .limit(1);
+  if (existing && existing.length > 0) return { ok: true };
+
   const row = {
     title,
     file_path: input.filePath,
@@ -83,7 +91,16 @@ export async function saveDocument(input: {
 /** 올리다 실패했을 때 남은 파일 치우기 */
 export async function discardUploadedFile(path: string): Promise<void> {
   await requireAuth();
-  if (path) await supabase().storage.from(BUCKET).remove([path]);
+  if (!path) return;
+  // 이미 문서로 저장된 파일이면 지우지 않는다.
+  // (저장은 됐는데 응답이 끊겨 브라우저가 실패로 안 경우 — 지우면 목록엔 있는데 안 열리는 문서가 된다)
+  const { data, error } = await supabase()
+    .from("documents")
+    .select("id")
+    .eq("file_path", path)
+    .limit(1);
+  if (error || (data && data.length > 0)) return; // 확인을 못 해도 안전하게 지우지 않는다
+  await supabase().storage.from(BUCKET).remove([path]);
 }
 
 export async function updateDocument(

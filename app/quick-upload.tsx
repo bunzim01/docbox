@@ -6,8 +6,7 @@ import { compressPdf, shouldCompress } from "@/lib/compress-pdf";
 import { MAX_FILE_BYTES } from "@/lib/documents";
 import { ACCEPT_EXTS, extFromFileName, formatSize, titleFromFileName } from "@/lib/format";
 import { tellCats } from "@/lib/cat-events";
-import { supabaseBrowser } from "@/lib/supabase-browser";
-import { discardUploadedFile, prepareUpload, saveDocument } from "./actions";
+import { uploadFile } from "@/lib/upload-file";
 
 /**
  * PC 화면 가운데의 올리기 영역.
@@ -42,7 +41,6 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
     let shrank = 0;
     for (const original of list) {
       let file = original;
-      let uploadedPath = "";
       try {
         // 큰 PDF 는 올리기 전에 줄인다
         if (shouldCompress(file)) {
@@ -58,30 +56,15 @@ export default function QuickUpload({ folderId }: { folderId: string | null }) {
           throw new Error(`${formatSize(file.size)} — 줄여도 ${formatSize(MAX_FILE_BYTES)}를 넘습니다.`);
         }
 
-        const prepared = await prepareUpload(file.name);
-        if (!prepared.ok) throw new Error(prepared.error);
-
-        const { error: uploadError } = await supabaseBrowser()
-          .storage.from("docs")
-          .uploadToSignedUrl(prepared.path, prepared.token, file, {
-            contentType: file.type || undefined,
-          });
-        if (uploadError) throw new Error(uploadError.message);
-        uploadedPath = prepared.path;
-
-        const saved = await saveDocument({
+        await uploadFile(file, {
           title: titleFromFileName(file.name),
-          filePath: prepared.path,
           fileType: extFromFileName(file.name),
-          fileSize: file.size,
           tags: [],
           memo: "",
           folderId,
         });
-        if (!saved.ok) throw new Error(saved.error);
       } catch (e) {
         failed += 1;
-        if (uploadedPath) await discardUploadedFile(uploadedPath).catch(() => {});
         setError(e instanceof Error ? e.message : "올리지 못했습니다.");
       }
       setDone((n) => n + 1);
