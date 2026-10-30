@@ -45,6 +45,7 @@ import {
   moveDocument,
   purgeDocument,
   removeInfluencer,
+  renameInfluencer,
   renameFolder,
   restoreDocument,
   setFavorite,
@@ -554,6 +555,7 @@ export default function DocList({
           influencers={influencers}
           pending={pending}
           onRemove={(p) => run(() => removeInfluencer(p.handle))}
+          onRename={(p, name) => run(() => renameInfluencer(p.handle, name))}
         />
       )}
 

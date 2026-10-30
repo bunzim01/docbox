@@ -10,14 +10,17 @@
 import { useState } from "react";
 import { instagramUrl, type Influencer } from "@/lib/influencers";
 
-/** 카드 왼쪽 위 모서리에 붙는 작은 '@' 배지 (장식 — 이름 자리를 뺏지 않게 모서리로 뺐다) */
+/** 카드 왼쪽 위 모서리에 붙는 작은 카메라 배지 (직접 그린 일반 카메라 — 인스타 로고 아님) */
 function AtBadge() {
   return (
     <span
       aria-hidden="true"
-      className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gold text-[12px] font-bold leading-none text-white shadow-sm"
+      className="absolute -left-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gold shadow-sm"
     >
-      @
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round">
+        <path d="M3.5 8.5h3l1.5-2.5h8l1.5 2.5h3v10.5h-17z" />
+        <circle cx="12" cy="13.5" r="3.3" />
+      </svg>
     </span>
   );
 }
@@ -26,10 +29,12 @@ export default function InfluencerGrid({
   influencers,
   pending,
   onRemove,
+  onRename,
 }: {
   influencers: Influencer[];
   pending: boolean;
   onRemove: (p: Influencer) => void;
+  onRename: (p: Influencer, name: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -37,7 +42,7 @@ export default function InfluencerGrid({
     <section className="px-5 pb-2 pt-3">
       <div className="mb-2 flex items-center gap-3">
         <h2 className="min-w-0 flex-1 text-base text-zinc-500">
-          셀러 {influencers.length}명{editing ? " · ✕ 누르면 빠짐" : " · 누르면 인스타 열림"}
+          셀러 {influencers.length}명{editing ? " · 이름 누르면 수정 · ✕ 빼기" : " · 누르면 인스타 열림"}
         </h2>
         {influencers.length > 0 && (
           <button
@@ -56,25 +61,30 @@ export default function InfluencerGrid({
         <div className="grid grid-cols-3 gap-2 pl-1 pt-1 sm:grid-cols-6">
           {influencers.map((p) =>
             editing ? (
-              <button
-                key={p.handle}
-                type="button"
-                disabled={pending}
-                onClick={() => {
-                  if (confirm(`"${p.name}" 을(를) 목록에서 뺄까요?`)) onRemove(p);
-                }}
-                className="relative flex min-w-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-1.5 py-2.5 disabled:opacity-50"
-              >
-                <span
-                  aria-hidden="true"
-                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[12px] font-bold leading-none text-white"
+              <div key={p.handle} className="relative">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    const name = window.prompt("셀러 이름 수정", p.name);
+                    if (name !== null && name.trim() && name.trim() !== p.name) onRename(p, name);
+                  }}
+                  className="flex w-full min-w-0 items-center justify-center rounded-xl border border-gold/40 bg-paper px-1.5 py-2.5 disabled:opacity-50"
+                >
+                  <span className="min-w-0 truncate text-base font-semibold tracking-tight">{p.name}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  aria-label={`${p.name} 빼기`}
+                  onClick={() => {
+                    if (confirm(`"${p.name}" 을(를) 목록에서 뺄까요?`)) onRemove(p);
+                  }}
+                  className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[13px] font-bold leading-none text-white disabled:opacity-50"
                 >
                   ✕
-                </span>
-                <span className="min-w-0 truncate text-base font-semibold tracking-tight text-red-700">
-                  {p.name}
-                </span>
-              </button>
+                </button>
+              </div>
             ) : (
               <a
                 key={p.handle}

@@ -394,6 +394,21 @@ export async function addInfluencer(name: string, link: string): Promise<Result>
   return { ok: true };
 }
 
+/** 셀러 이름 바꾸기 (인스타 아이디는 그대로) */
+export async function renameInfluencer(handle: string, name: string): Promise<Result> {
+  await requireAuth();
+  const cleanName = name.trim().replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  if (!cleanName) return { ok: false, error: "셀러명을 입력해 주세요." };
+  const list = await readInfluencers();
+  const next = list.map((p) =>
+    p.handle.toLowerCase() === handle.toLowerCase() ? { ...p, name: cleanName } : p,
+  );
+  const error = await writeInfluencers(next);
+  if (error) return { ok: false, error: `저장하지 못했습니다. (${error})` };
+  revalidatePath("/");
+  return { ok: true };
+}
+
 /** 셀러 빼기 */
 export async function removeInfluencer(handle: string): Promise<Result> {
   await requireAuth();
