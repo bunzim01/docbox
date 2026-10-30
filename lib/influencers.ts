@@ -7,6 +7,13 @@ export type Influencer = { name: string; handle: string };
 
 export const INFLUENCER_FOLDER_NAME = "인플루언서";
 
+/** 이 폴더가 '인플루언서' 폴더인지 — 띄어쓰기·한글 조합 방식(NFC/NFD) 차이는 무시한다 */
+export function isInfluencerFolder(name: string | null | undefined): boolean {
+  if (!name) return false;
+  const clean = (v: string) => v.normalize("NFC").replace(/\s+/g, "");
+  return clean(name) === clean(INFLUENCER_FOLDER_NAME);
+}
+
 export const INFLUENCERS: Influencer[] = [
   { name: "별쌤", handle: "b.saem" },
   { name: "서유진 (zinga)", handle: "zinga.173" },

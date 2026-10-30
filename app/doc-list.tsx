@@ -31,7 +31,7 @@ import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
 import HomeIcon from "./home-icon";
 import InfluencerGrid from "./influencer-grid";
-import { INFLUENCER_FOLDER_NAME } from "@/lib/influencers";
+import { isInfluencerFolder } from "@/lib/influencers";
 import KakaoIcon from "./kakao-icon";
 import QuickUpload from "./quick-upload";
 import ShareButton, { KakaoSheet } from "./share-button";
@@ -173,7 +173,7 @@ export default function DocList({
   const currentFolder = folders.find((f) => f.id === openFolder) ?? null;
   const inNoFolder = openFolder === NO_FOLDER;
   /** '인플루언서' 폴더면 맨 위에 셀러 인스타 카드를 보여 준다 (lib/influencers.ts) */
-  const inInfluencers = !searching && currentFolder?.name.trim() === INFLUENCER_FOLDER_NAME;
+  const inInfluencers = !searching && isInfluencerFolder(currentFolder?.name);
   const path = useMemo(() => folderPath(folders, openFolder), [folders, openFolder]);
   const children = useMemo(
     () => (inNoFolder ? [] : childFolders(folders, openFolder)),
