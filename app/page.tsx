@@ -12,6 +12,7 @@ import {
   withFileUrl,
 } from "@/lib/documents";
 import DocList from "./doc-list";
+import { readInfluencers } from "@/lib/influencer-store";
 
 export default async function HomePage() {
   await connection();
@@ -21,10 +22,11 @@ export default async function HomePage() {
     // 보관 기간이 지난 휴지통 문서는 들어올 때 정리한다
     await purgeExpiredTrash().catch(() => {});
 
-    const [docs, loadedFolders, trashedDocs] = await Promise.all([
+    const [docs, loadedFolders, trashedDocs, influencers] = await Promise.all([
       listDocuments(),
       listFolders(),
       listTrashed(),
+      readInfluencers(),
     ]);
     // 사용자 요청: '체크리스트2' → '인플루언서' (한 번만, lib/documents.ts 참고)
     const folders = await renameChecklist2Once(loadedFolders);
@@ -42,7 +44,7 @@ export default async function HomePage() {
     return (
       <>
         <Suspense>
-          <DocList documents={documents} folders={folders} trashed={trashed} />
+          <DocList documents={documents} folders={folders} trashed={trashed} influencers={influencers} />
         </Suspense>
       </>
     );

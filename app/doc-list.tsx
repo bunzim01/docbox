@@ -31,11 +31,12 @@ import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
 import HomeIcon from "./home-icon";
 import InfluencerGrid from "./influencer-grid";
-import { isInfluencerFolder } from "@/lib/influencers";
+import { isInfluencerFolder, parseInstagramHandle, type Influencer } from "@/lib/influencers";
 import KakaoIcon from "./kakao-icon";
 import QuickUpload from "./quick-upload";
 import ShareButton, { KakaoSheet } from "./share-button";
 import {
+  addInfluencer,
   createFolder,
   deleteDocument,
   deleteFolder,
@@ -43,6 +44,7 @@ import {
   markSentMany,
   moveDocument,
   purgeDocument,
+  removeInfluencer,
   renameFolder,
   restoreDocument,
   setFavorite,
@@ -78,11 +80,14 @@ export default function DocList({
   documents,
   folders,
   trashed,
+  influencers,
 }: {
   documents: DocView[];
   folders: Folder[];
   trashed: TrashedDoc[];
+  influencers: Influencer[];
 }) {
+  const [addingSeller, setAddingSeller] = useState(false);
   const onPhone = useOnPhone();
   const router = useRouter();
   const params = useSearchParams();
@@ -457,7 +462,16 @@ export default function DocList({
             </button>
           )}
 
-          {!atRoot && (
+          {!atRoot && inInfluencers && (
+            <button
+              type="button"
+              onClick={() => setAddingSeller(true)}
+              className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
+            >
+              셀러 추가
+            </button>
+          )}
+          {!atRoot && !inInfluencers && (
             <Link
               href={uploadHref}
               className="hidden shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-base font-semibold text-white active:bg-zinc-700 sm:block sm:hover:bg-zinc-700"
@@ -535,7 +549,13 @@ export default function DocList({
         />
       )}
 
-      {inInfluencers && <InfluencerGrid />}
+      {inInfluencers && (
+        <InfluencerGrid
+          influencers={influencers}
+          pending={pending}
+          onRemove={(p) => run(() => removeInfluencer(p.handle))}
+        />
+      )}
 
       {!(inInfluencers && sorted.length === 0 && children.length === 0) && (
       <DocRows
@@ -637,7 +657,7 @@ export default function DocList({
         )
       ) : null}
 
-      {!selecting && !searching && !inNoFolder && !atRoot && (
+      {!selecting && !searching && !inNoFolder && !atRoot && !inInfluencers && (
         <QuickUpload folderId={openFolder} />
       )}
 
@@ -699,7 +719,18 @@ export default function DocList({
         </button>
       )}
 
-      {!selecting && !atRoot && (
+      {!selecting && !atRoot && inInfluencers && (
+        <button
+          type="button"
+          onClick={() => setAddingSeller(true)}
+          aria-label="셀러 추가"
+          className="fixed bottom-6 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-3xl leading-none text-white shadow-lg active:bg-zinc-700 sm:hidden"
+        >
+          +
+        </button>
+      )}
+
+      {!selecting && !atRoot && !inInfluencers && (
         <Link
           href={uploadHref}
           aria-label="문서 올리기"
@@ -737,6 +768,17 @@ export default function DocList({
         <div className="sheet-in fixed bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-6 py-3 text-lg text-white shadow-xl">
           {toast}
         </div>
+      )}
+
+      {addingSeller && (
+        <AddSellerSheet
+          onClose={() => setAddingSeller(false)}
+          onSaved={(name) => {
+            setAddingSeller(false);
+            setToast(`✓ ${name} 추가했습니다`);
+            router.refresh();
+          }}
+        />
       )}
 
       {newFolderOpen && (
@@ -1331,6 +1373,82 @@ function Sheet({
         {children}
       </div>
     </div>
+  );
+}
+
+/** 인플루언서 폴더의 셀러 추가 — 파일이 아니라 이름 + 인스타 링크를 넣는다 */
+function AddSellerSheet({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [link, setLink] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const handle = parseInstagramHandle(link);
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await addInfluencer(name, link);
+      if (!result.ok) {
+        setError(result.error); // 창 뒤 본문이 아니라 창 안에 띄운다
+        return;
+      }
+      onSaved(name.trim());
+    } catch {
+      setError("저장하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet title="셀러 추가" onClose={onClose}>
+      <label className="mb-1 block text-base text-zinc-500">셀러명</label>
+      <input
+        value={name}
+        autoFocus
+        onChange={(e) => setName(e.target.value)}
+        placeholder="예) 별쌤"
+        className="mb-4 w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
+      />
+      <label className="mb-1 block text-base text-zinc-500">인스타그램 링크 또는 @아이디</label>
+      <input
+        value={link}
+        onChange={(e) => setLink(e.target.value)}
+        placeholder="instagram.com/아이디 또는 @아이디"
+        inputMode="url"
+        autoCapitalize="none"
+        autoCorrect="off"
+        className="w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-lg outline-none focus:border-gold sm:py-2.5"
+      />
+      <p className={`mb-4 mt-1.5 text-base ${link.trim() && !handle ? "text-red-600" : "text-zinc-400"}`}>
+        {!link.trim() ? "인스타 앱에서 프로필 공유 → 링크 복사 후 붙여넣기" : handle ? `@${handle} 로 연결됩니다` : "아이디를 찾지 못했습니다"}
+      </p>
+      {error && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-base text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-xl border border-zinc-300 py-4 text-xl font-semibold text-zinc-600 sm:py-2.5 sm:hover:bg-zinc-50"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          disabled={saving || !name.trim() || !handle}
+          onClick={save}
+          className="flex-[2] rounded-xl bg-zinc-900 py-4 text-xl font-semibold text-white active:bg-zinc-700 disabled:opacity-40 sm:py-2.5 sm:hover:bg-zinc-700"
+        >
+          {saving ? "저장 중…" : "추가"}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 

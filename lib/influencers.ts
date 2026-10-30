@@ -1,6 +1,7 @@
 /**
- * '인플루언서' 폴더에 보여 줄 셀러 목록 — 카드를 누르면 그 사람 인스타그램 계정이 열린다.
- * 사용자가 준 표(셀러명·인스타그램 링크)를 그대로 옮겼다. 사람을 더하거나 빼려면 여기만 고치면 된다.
+ * '인플루언서' 폴더의 셀러 — 카드를 누르면 그 사람 인스타그램 계정이 열린다.
+ * 실제 명단은 저장소의 `_data/influencers.json` 에 있고(lib/influencer-store.ts), 앱에서 더하고 뺀다.
+ * 아래 INFLUENCERS 는 처음 한 번 그 파일을 만들 때 넣는 시작 명단(사용자가 준 표)이다.
  * handle 은 인스타그램 주소 끝의 아이디 (instagram.com/<handle>).
  */
 export type Influencer = { name: string; handle: string };
@@ -14,6 +15,7 @@ export function isInfluencerFolder(name: string | null | undefined): boolean {
   return clean(name) === clean(INFLUENCER_FOLDER_NAME);
 }
 
+/** 시작 명단 — 저장 파일이 아직 없을 때만 쓴다 */
 export const INFLUENCERS: Influencer[] = [
   { name: "별쌤", handle: "b.saem" },
   { name: "서유진", handle: "zinga.173" },
@@ -43,4 +45,18 @@ export const INFLUENCERS: Influencer[] = [
 
 export function instagramUrl(handle: string): string {
   return `https://www.instagram.com/${handle}/`;
+}
+
+/**
+ * 사용자가 넣은 링크·아이디에서 인스타 아이디만 뽑는다. 못 뽑으면 null.
+ * 받는 모양: https://www.instagram.com/abc/?igsh=… · instagram.com/abc · @abc · abc
+ */
+export function parseInstagramHandle(input: string): string | null {
+  const text = input.trim();
+  if (!text) return null;
+  const fromUrl = text.match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+  const handle = (fromUrl ? fromUrl[1] : text.replace(/^@/, "")).trim();
+  if (!/^[A-Za-z0-9._]{1,30}$/.test(handle)) return null;
+  if (["p", "reel", "reels", "stories", "explore"].includes(handle.toLowerCase())) return null; // 게시물 주소
+  return handle;
 }

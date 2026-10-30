@@ -5,6 +5,8 @@ import { requireAuth } from "@/lib/auth-server";
 import { BUCKET, supabase } from "@/lib/supabase";
 import { MAX_FOLDER_DEPTH } from "@/lib/documents";
 import { extFromFileName } from "@/lib/format";
+import { parseInstagramHandle } from "@/lib/influencers";
+import { readInfluencers, writeInfluencers } from "@/lib/influencer-store";
 
 export type Result = { ok: true } | { ok: false; error: string };
 
@@ -362,6 +364,44 @@ export async function markSentMany(ids: string[]): Promise<Result> {
     if (error) return { ok: false, error: error.message };
   }
 
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/* ---------------- 인플루언서(셀러) 명단 ---------------- */
+
+/** 셀러 추가 — 이름 + 인스타 링크(또는 @아이디). 같은 아이디가 있으면 이름만 바꾼다 */
+export async function addInfluencer(name: string, link: string): Promise<Result> {
+  await requireAuth();
+
+  const cleanName = name.trim().replace(/\s*\([^)]*\)\s*/g, " ").trim(); // 괄호 안은 넣지 않는다(사용자 요청)
+  if (!cleanName) return { ok: false, error: "셀러명을 입력해 주세요." };
+  const handle = parseInstagramHandle(link);
+  if (!handle) {
+    return { ok: false, error: "인스타그램 링크나 @아이디를 확인해 주세요. 예) instagram.com/abc 또는 @abc" };
+  }
+
+  const list = await readInfluencers();
+  const same = list.findIndex((p) => p.handle.toLowerCase() === handle.toLowerCase());
+  const next =
+    same >= 0
+      ? list.map((p, i) => (i === same ? { name: cleanName, handle } : p))
+      : [...list, { name: cleanName, handle }];
+
+  const error = await writeInfluencers(next);
+  if (error) return { ok: false, error: `저장하지 못했습니다. (${error})` };
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** 셀러 빼기 */
+export async function removeInfluencer(handle: string): Promise<Result> {
+  await requireAuth();
+  const list = await readInfluencers();
+  const next = list.filter((p) => p.handle.toLowerCase() !== handle.toLowerCase());
+  if (next.length === list.length) return { ok: true };
+  const error = await writeInfluencers(next);
+  if (error) return { ok: false, error: `저장하지 못했습니다. (${error})` };
   revalidatePath("/");
   return { ok: true };
 }
