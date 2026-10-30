@@ -8,6 +8,7 @@ import {
   listFolders,
   listTrashed,
   purgeExpiredTrash,
+  renameChecklist2Once,
   withFileUrl,
 } from "@/lib/documents";
 import DocList from "./doc-list";
@@ -20,11 +21,13 @@ export default async function HomePage() {
     // 보관 기간이 지난 휴지통 문서는 들어올 때 정리한다
     await purgeExpiredTrash().catch(() => {});
 
-    const [docs, folders, trashedDocs] = await Promise.all([
+    const [docs, loadedFolders, trashedDocs] = await Promise.all([
       listDocuments(),
       listFolders(),
       listTrashed(),
     ]);
+    // 사용자 요청: '체크리스트2' → '인플루언서' (한 번만, lib/documents.ts 참고)
+    const folders = await renameChecklist2Once(loadedFolders);
     const documents = docs.map(withFileUrl);
 
     // 남은 날짜는 서버에서 계산해 내려준다 (브라우저와 시각이 달라 화면이 어긋나지 않게)

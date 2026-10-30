@@ -57,6 +57,23 @@ export async function listFolders(): Promise<Folder[]> {
   return (data ?? []) as Folder[];
 }
 
+/**
+ * 한 번만 하는 이름 바꾸기: 맨 위 '체크리스트2' 폴더 → '인플루언서'.
+ * 사용자가 바꿔 달라고 했는데 여기서는 데이터에 직접 들어갈 수 없어, 첫 화면을 열 때 서버가 바꾼다.
+ * 이미 '인플루언서' 가 있거나 '체크리스트2' 가 없으면 아무것도 안 한다(몇 번 불려도 안전). 폴더 안 문서는 그대로.
+ * 바뀐 것이 확인되면 이 함수와 app/page.tsx 의 호출을 지워도 된다.
+ */
+export async function renameChecklist2Once(folders: Folder[]): Promise<Folder[]> {
+  const top = folders.filter((f) => !f.parent_id);
+  if (top.some((f) => f.name.trim() === "인플루언서")) return folders;
+  const target = top.find((f) => f.name.trim() === "체크리스트2");
+  if (!target) return folders;
+
+  const { error } = await supabase().from("folders").update({ name: "인플루언서" }).eq("id", target.id);
+  if (error) return folders; // 실패해도 화면은 그대로 열리게
+  return folders.map((f) => (f.id === target.id ? { ...f, name: "인플루언서" } : f));
+}
+
 /** 문서함 목록: 즐겨찾기 먼저 → 최근 보낸 순 → 최근 올린 순 (휴지통에 있는 것은 제외) */
 export async function listDocuments(): Promise<Doc[]> {
   const query = () =>
