@@ -30,6 +30,8 @@ import Cats from "./cats";
 import FileIcon from "./file-icon";
 import FolderIcon from "./folder-icon";
 import HomeIcon from "./home-icon";
+import InfluencerGrid from "./influencer-grid";
+import { INFLUENCER_FOLDER_NAME } from "@/lib/influencers";
 import KakaoIcon from "./kakao-icon";
 import QuickUpload from "./quick-upload";
 import ShareButton, { KakaoSheet } from "./share-button";
@@ -170,6 +172,8 @@ export default function DocList({
 
   const currentFolder = folders.find((f) => f.id === openFolder) ?? null;
   const inNoFolder = openFolder === NO_FOLDER;
+  /** '인플루언서' 폴더면 맨 위에 셀러 인스타 카드를 보여 준다 (lib/influencers.ts) */
+  const inInfluencers = !searching && currentFolder?.name.trim() === INFLUENCER_FOLDER_NAME;
   const path = useMemo(() => folderPath(folders, openFolder), [folders, openFolder]);
   const children = useMemo(
     () => (inNoFolder ? [] : childFolders(folders, openFolder)),
@@ -508,7 +512,7 @@ export default function DocList({
         <FolderSection
           compact={!atRoot}
           folders={children}
-          noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
+          noFolderCount={0}
           canAdd={path.length < MAX_FOLDER_DEPTH}
           onAdd={() => setNewFolderOpen(true)}
           editMode={editFolders}
@@ -528,11 +532,14 @@ export default function DocList({
         />
       )}
 
+      {inInfluencers && <InfluencerGrid />}
+
+      {!(inInfluencers && sorted.length === 0 && children.length === 0) && (
       <DocRows
         docs={atRoot ? [] : sorted}
         folders={folders}
         folderRows={searching || inNoFolder ? [] : children}
-        noFolderCount={openFolder ? 0 : (counts.get(NO_FOLDER) ?? 0)}
+        noFolderCount={0}
         onOpenNoFolder={() => goFolder(NO_FOLDER)}
         onOpenFolder={goFolder}
         onRenameFolder={(f) => setRenaming(f)}
@@ -577,6 +584,7 @@ export default function DocList({
         onShared={() => router.refresh()}
         onNotify={setToast}
       />
+      )}
 
       {atRoot ? (
         homeList.length > 0 && (
@@ -626,15 +634,27 @@ export default function DocList({
         <QuickUpload folderId={openFolder} />
       )}
 
-      {atRoot && trashed.length > 0 && (
-        <div className="px-5 pt-8">
-          <button
-            type="button"
-            onClick={() => goFolder(TRASH)}
-            className="text-base text-zinc-500 underline"
-          >
-            휴지통 {trashed.length}
-          </button>
+      {atRoot && (trashed.length > 0 || (counts.get(NO_FOLDER) ?? 0) > 0) && (
+        <div className="flex gap-5 px-5 pt-8">
+          {/* '분류 안 함' 은 폴더 타일로 두지 않는다(사용자가 지워 달라고 했다). 폴더 없는 문서가 있을 때만 작은 글자로 */}
+          {(counts.get(NO_FOLDER) ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => goFolder(NO_FOLDER)}
+              className="text-base text-zinc-500 underline"
+            >
+              분류 안 함 {counts.get(NO_FOLDER)}
+            </button>
+          )}
+          {trashed.length > 0 && (
+            <button
+              type="button"
+              onClick={() => goFolder(TRASH)}
+              className="text-base text-zinc-500 underline"
+            >
+              휴지통 {trashed.length}
+            </button>
+          )}
         </div>
       )}
 
@@ -645,7 +665,7 @@ export default function DocList({
         !selecting &&
         path.length < MAX_FOLDER_DEPTH &&
         children.length === 0 &&
-        (openFolder ? true : (counts.get(NO_FOLDER) ?? 0) === 0) && (
+        (
         <div className="px-5 pt-6 sm:hidden">
           <button
             type="button"
