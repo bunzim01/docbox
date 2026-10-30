@@ -37,6 +37,10 @@ export default function InfluencerGrid({
   onRename: (p: Influencer, name: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  // 가나다순 (숫자는 숫자로 비교)
+  const list = [...influencers].sort((a, b) =>
+    a.name.localeCompare(b.name, "ko", { numeric: true }),
+  );
 
   return (
     <section className="px-5 pb-2 pt-3">
@@ -59,7 +63,7 @@ export default function InfluencerGrid({
         <p className="py-6 text-center text-base text-zinc-400">+ 버튼으로 셀러를 추가하세요.</p>
       ) : (
         <div className="grid grid-cols-3 gap-2 pl-1 pt-1 sm:grid-cols-6">
-          {influencers.map((p) =>
+          {list.map((p) =>
             editing ? (
               <div key={p.handle} className="relative">
                 <button
