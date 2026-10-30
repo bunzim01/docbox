@@ -133,13 +133,32 @@ export function folderNameLines(name: string): string[] {
 }
 
 /** 어떤 폴더의 바로 아래 하위폴더들 (가나다순) */
+/**
+ * 맨 위 폴더는 정해진 순서로: 제품소개서 → 체크리스트 → 인플루언서 (사용자가 정한 순서).
+ * 이름이 이 낱말로 시작하면 해당 자리에 놓는다(체크리스트1 도 '체크리스트' 자리). 나머지 폴더와 하위폴더는 가나다순.
+ */
+const TOP_FOLDER_ORDER = ["제품소개서", "체크리스트", "인플루언서"];
+
+function topRank(name: string): number {
+  const clean = name.normalize("NFC").replace(/\s+/g, "");
+  const i = TOP_FOLDER_ORDER.findIndex((word) => clean.startsWith(word));
+  return i === -1 ? TOP_FOLDER_ORDER.length : i;
+}
+
+/** 폴더 정렬 — 맨 위(parentId 가 null)면 정해진 순서 먼저, 그다음 가나다순 */
+function compareFolders(parentId: string | null) {
+  return (a: { name: string }, b: { name: string }) =>
+    (parentId === null ? topRank(a.name) - topRank(b.name) : 0) ||
+    a.name.localeCompare(b.name, "ko", { numeric: true });
+}
+
 export function childFolders<T extends { id: string; name: string; parent_id: string | null }>(
   folders: T[],
   parentId: string | null,
 ): T[] {
   return folders
     .filter((f) => (f.parent_id ?? null) === parentId)
-    .sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
+    .sort(compareFolders(parentId));
 }
 
 /** 맨 위부터 그 폴더까지의 경로 (예: 제품소개서 › A브랜드) */
@@ -185,7 +204,7 @@ export function flattenFolders<
 >(folders: T[], parentId: string | null = null, depth = 0): { folder: T; depth: number }[] {
   const here = folders
     .filter((f) => (f.parent_id ?? null) === parentId)
-    .sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
+    .sort(compareFolders(parentId));
 
   const out: { folder: T; depth: number }[] = [];
   for (const folder of here) {

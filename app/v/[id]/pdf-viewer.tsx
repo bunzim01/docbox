@@ -6,6 +6,7 @@ import type { DocView } from "@/lib/documents";
 import { prepareFiles, preparedFile } from "@/lib/share";
 import BackIcon from "@/app/back-icon";
 import ShareButton from "@/app/share-button";
+import Spinner from "@/app/spinner";
 
 /** 쪽 하나를 그릴 가로 픽셀 — 손가락으로 확대해도 글자가 읽히게 화면보다 넉넉히, 그래도 너무 크지 않게 */
 function targetWidth(cssWidth: number): number {
@@ -18,6 +19,7 @@ export default function PdfViewer({ doc }: { doc: DocView }) {
   const box = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<string[]>([]); // 다 그린 쪽 그림 (blob 주소)
   const [total, setTotal] = useState(0);
+  const [pct, setPct] = useState<number | null>(null); // 파일 받는 진행률
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
 
@@ -35,7 +37,9 @@ export default function PdfViewer({ doc }: { doc: DocView }) {
     (async () => {
       try {
         // 카톡 버튼과 같은 파일을 쓴다 — 한 번만 받고, 받고 나면 카톡 버튼도 바로 보낼 수 있다
-        await prepareFiles([doc]);
+        await prepareFiles([doc], (received, size) => {
+          if (size > 0 && !stopped) setPct(Math.min(99, Math.floor((received / size) * 100)));
+        });
         const file = preparedFile(doc.id);
         if (!file) throw new Error("파일을 받지 못했습니다.");
 
@@ -128,9 +132,16 @@ export default function PdfViewer({ doc }: { doc: DocView }) {
         ))}
 
         {loading && (
-          <p className="py-10 text-center text-lg text-zinc-500">
-            {total > 0 ? `여는 중… (${pages.length}/${total}쪽)` : "여는 중…"}
-          </p>
+          <div className="flex flex-col items-center gap-3 py-12">
+            <Spinner className={pages.length > 0 ? "h-8 w-8" : "h-12 w-12"} />
+            <p className="text-center text-lg text-zinc-500">
+              {total > 0
+                ? `여는 중… (${pages.length}/${total}쪽)`
+                : pct !== null
+                  ? `받는 중… ${pct}%`
+                  : "문서 여는 중…"}
+            </p>
+          </div>
         )}
 
         {error && (

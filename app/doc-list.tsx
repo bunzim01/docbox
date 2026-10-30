@@ -58,6 +58,9 @@ type TrashedDoc = DocView & { daysLeft: number };
 
 type Result = { ok: true } | { ok: false; error: string };
 
+/** 폰에서 파일을 밖(다른 앱)으로 열 때 잠깐 띄우는 안내 */
+const OPENING_MSG = "파일 여는 중… 잠시만 기다려 주세요";
+
 /** 폰에서 쓰는 중인지 (PDF 를 여는 방식이 달라진다 — lib/format.ts viewUrl 참고) */
 function useOnPhone(): boolean {
   return useSyncExternalStore(
@@ -603,6 +606,10 @@ export default function DocList({
                     href={viewUrl(doc, onPhone)}
                     prefetch={false}
                     {...(opensInApp(doc, onPhone) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                    onClick={() => {
+                      // 폰에서 밖으로 여는 파일(엑셀·PPT·영상 등)은 열리기까지 아무 반응이 없어 보였다
+                      if (onPhone && !opensInApp(doc, onPhone)) setToast(OPENING_MSG);
+                    }}
                     className="min-w-0 flex-1 hover:underline"
                   >
                     <span className="line-clamp-2 text-lg leading-snug [overflow-wrap:anywhere] sm:line-clamp-1">
@@ -1186,6 +1193,9 @@ function DocRows({
                     href={viewUrl(doc, onPhone)}
                     prefetch={false}
                     {...(opensInApp(doc, onPhone) ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                    onClick={() => {
+                      if (onPhone && !opensInApp(doc, onPhone)) onNotify(OPENING_MSG);
+                    }}
                     className="line-clamp-2 [overflow-wrap:anywhere] hover:underline sm:line-clamp-1"
                   >
                     {doc.title}
