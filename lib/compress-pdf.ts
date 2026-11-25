@@ -1,5 +1,6 @@
 /**
- * 큰 PDF 를 브라우저에서 줄인다.
+ * 50MB 를 넘는 PDF 만 브라우저에서 줄인다. (50MB 이하는 원본 그대로 올린다 — 화질 보존)
+ * 줄일 때도 한도에 들어가는 가장 높은 화질을 고른다(품질 사다리).
  *
  * 사용자의 제안서·상세페이지는 쪽마다 전면 이미지 한 장인 PDF 이고(글꼴 0개),
  * 그 이미지가 품질 100에 가깝게 저장돼 있어 장당 2MB 가 넘는다.
@@ -10,8 +11,13 @@
  * (PDF 바이트를 직접 고쳐 쓰면 고객에게 보낼 문서가 깨질 위험이 있어 그렇게 하지 않는다)
  */
 
-/** JPEG 품질 — 0.8 이면 품질 100짜리 원본과 눈으로 구분이 잘 안 된다 */
-const QUALITY = 0.8;
+import { MAX_FILE_BYTES } from "./documents";
+
+/**
+ * JPEG 품질 사다리 — 위에서부터 시도해 50MB 안에 처음 들어가는 것을 쓴다.
+ * 대부분 첫 번째(0.92)나 두 번째에서 끝난다. 0.6 으로도 안 들어가면 포기하고 안내한다.
+ */
+const QUALITIES = [0.92, 0.85, 0.78, 0.7, 0.6];
 
 /**
  * 그릴 해상도의 상한 (DPI). 300 은 인쇄 품질이라 이보다 위는 의미가 없다.
@@ -51,13 +57,10 @@ function maxImageWidth(bytes: Uint8Array): number {
 }
 
 /**
- * 이 크기를 넘는 PDF 만 줄여 본다.
- * 50MB 제한 때문만이 아니라, 큰 파일은 카톡으로 보낼 때도 느려서 10초 목표를 못 맞춘다.
+ * 저장소 한도(50MB)를 넘는 PDF 만 줄여 본다. 한도 이하는 원본 그대로 —
+ * 예전엔 10MB 부터 줄였더니 줄일 필요 없는 파일까지 화질이 떨어졌다.
  */
-export const COMPRESS_OVER = 10 * 1024 * 1024;
-
-/** 이만큼 아래로 줄어야 압축본을 쓴다. 조금밖에 안 줄면 원본이 낫다 */
-const KEEP_IF_UNDER = 0.75;
+export const COMPRESS_OVER = MAX_FILE_BYTES;
 
 /** 이 파일을 줄여 볼 만한가 (확실한 건 열어 봐야 안다 — compressPdf 가 최종 판단) */
 export function shouldCompress(file: File): boolean {
@@ -125,7 +128,9 @@ export async function compressPdf(file: File): Promise<CompressResult | null> {
       return null;
     }
 
-    const pages: { jpeg: Uint8Array; w: number; h: number; boxW: number; boxH: number }[] = [];
+    type PageImg = { jpeg: Uint8Array; w: number; h: number; boxW: number; boxH: number };
+    const renderAll = async (quality: number): Promise<PageImg[] | null> => {
+    const pages: PageImg[] = [];
 
     for (let n = 1; n <= doc.numPages; n++) {
       const page = await doc.getPage(n);
@@ -150,7 +155,7 @@ export async function compressPdf(file: File): Promise<CompressResult | null> {
       await page.render({ canvas, canvasContext: ctx, viewport }).promise;
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", QUALITY),
+        canvas.toBlob(resolve, "image/jpeg", quality),
       );
       if (!blob) return null;
 
@@ -166,11 +171,22 @@ export async function compressPdf(file: File): Promise<CompressResult | null> {
       canvas.height = 0;
     }
 
-    await task.destroy();
+    return pages;
+    };
 
-    const out = buildPdf(pages);
-    // 눈에 띄게 줄지 않으면(4분의 1 미만) 원본을 그대로 쓴다 — 괜히 화질만 깎을 이유가 없다
-    if (out.length > file.size * KEEP_IF_UNDER) return null;
+    // 높은 화질부터 시도해 한도에 처음 들어가는 것을 쓴다
+    let out: Uint8Array | null = null;
+    for (const q of QUALITIES) {
+      const pages = await renderAll(q);
+      if (!pages) break;
+      const built = buildPdf(pages);
+      if (built.length <= MAX_FILE_BYTES) {
+        out = built;
+        break;
+      }
+    }
+    await task.destroy();
+    if (!out) return null; // 가장 낮은 화질로도 한도를 넘으면 원본 그대로 두고 호출한 쪽이 안내한다
 
     const name = file.name;
     return {
